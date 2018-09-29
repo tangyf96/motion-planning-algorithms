@@ -88,7 +88,7 @@ class RRT():
                if distance <= min_dist : 
                    min_dist = distance
                    node_index = iter
-       else if mode == "Mahattan": 
+       elif mode == "Mahattan" : 
            min_dist = (self.start.x - node_rnd[0]) + (self.start.y - node_rnd[1])
            for iter in range(len(nodelist)):
                distance = (nodelist[iter].x - node_rnd[0]) + (nodelist[iter].y - node_rnd[1])
@@ -115,8 +115,21 @@ class RRT():
            else math.sqrt(dist**2 + dist_parent_child**2) <= radius:
                return false
            
-   def FindPath():
-
+   def FindPath(self):
+       """
+       Find path from the goal node to start node
+       """
+       
+       path = [[self.goal.x, self.goal.y]]
+       
+       index = len(path) - 1
+       while (self.nodelist[index].parent) is not None:
+           node_path = self.nodelist[index]
+           path.append([node_path.x, node_path.y])
+           index = node_path.parent
+       return path
+   
+    
    def DrawTree():
 
 class Node():
@@ -131,4 +144,4 @@ class Node():
 def main():
     rrt = RRT()
     nodelist = rrt.GrowTree()
-    rrt.FindPath()
+    path = rrt.FindPath()
