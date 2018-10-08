@@ -14,7 +14,7 @@ class RRT():
    """
    Class for basic RRT motion planning 
    """
-   def __init__(self, start, goal, stepsize, obstacle = [], TreeArea, SampleRate=2, maxIter=500):
+   def __init__ (self, start, goal, stepsize, obstacle, TreeArea, SampleRate=2, maxIter=500):
        """
        This is the initialization for class RRT
        Parameters:
@@ -33,6 +33,9 @@ class RRT():
        self.max_rand = TreeArea[1]
        self.SampleRate = SampleRate
        self.maxIter = maxIter
+       self.path = [[self.goal.x, self.goal.y]]
+       print('min_rand is : %s', self.min_rand)
+       print('max_rand is : $s', self.max_rand)
        
 
    def GrowTree(self):
@@ -41,8 +44,10 @@ class RRT():
        
        """
        self.nodelist = [self.start]
-       
+       step = 0
        while True:
+           step += 1
+           print('begin iteration ', step, 'to find the goal')
            if random.randint(0,10) > self.SampleRate:
                node_rnd = [random.uniform(self.min_rand, self.max_rand),
                            random.uniform(self.min_rand, self.max_rand)]
@@ -54,29 +59,36 @@ class RRT():
            node_nearest = self.nodelist[node_nearest_index]
            
            # Expand Tree
-           theta = math.atan2(node_rnd[0] - node_nearest.x, node_rnd[1] - node_nearest.y)
+           theta = math.atan2(node_rnd[1] - node_nearest.y, node_rnd[0] - node_nearest.x)
            
            node_new = copy.deepcopy(node_nearest)
-           node_new.x += stepsize * math.cos(theta)
-           node_new.y += stepsize * math.sin(theta)
+           node_new.x += self.stepsize * math.cos(theta)
+           node_new.y += self.stepsize * math.sin(theta)
 #           node_new.x += (node_rnd[0] - node_nearest.x) * math.cos(theta)
 #           node_new.y += (node_rnd[1] - node_nearest.y) * math.sin(theta)
            node_new.parent = node_nearest_index
            
            # Collision check
-           if self.CollisionCheck(node_new, self.obstacle):
-               break
+           if not self.CollisionCheck(node_new, self.obstacle):
+               continue
            
            # add new node to list
            self.nodelist.append(node_new)
            
            # Check whether reach goal
-           goal_dist = math_sqrt((node_new.x - self.goal.x)**2 + (node_new.y - self.goal.y)**2)
+           goal_dist = math.sqrt((node_new.x - self.goal.x)**2 + (node_new.y - self.goal.y)**2)
            if goal_dist <= self.stepsize:
                print("The algorithm finds the goal")
-               return nodelist
+               return True
+               break
+           # draw the graph after finding new node
+           self.DrawTree()
+           if (step >= self.maxIter):
+               print('after ', self.maxIter, "still don't find the goal")
+               return False
                break
            
+            
    def FindNearestNode(self, nodelist, node_rnd, mode = "Euclidean"):
        """
        Use Euclidean Distance or Mahattan Distance to find the nearest node
@@ -106,32 +118,62 @@ class RRT():
        Check whether the path from new node to its parents collide with obstacles
        """
        node_parent = self.nodelist[node_new.parent]
-       dist_parent_child = math.sqrt((node_parent.x - node_new.x)**2
-                                     +node_parent.y - node_new.y)**2)
+       dist_parent_child = math.sqrt((node_parent.x - node_new.x)**2 + 
+                                     (node_parent.y - node_new.y)**2)
        for (x, y, radius) in obstacle: 
            dist = math.sqrt((x - node_new.x)**2 + (y - node_new.y)**2)
            if dist <= radius:
-               return false
-           else math.sqrt(dist**2 + dist_parent_child**2) <= radius:
-               return false
+               return False
+           elif math.sqrt(dist**2 + dist_parent_child**2) <= radius:
+               return False
+       return True
            
+    
    def FindPath(self):
        """
        Find path from the goal node to start node
        """
        
-       path = [[self.goal.x, self.goal.y]]
-       
-       index = len(path) - 1
+       index = len(self.nodelist) - 1
        while (self.nodelist[index].parent) is not None:
            node_path = self.nodelist[index]
-           path.append([node_path.x, node_path.y])
+           #print(node_path)
+           self.path.append([node_path.x, node_path.y])
+           #print(self.path)
            index = node_path.parent
-       return path
-   
+       self.path.append([self.start.x, self.start.y])
     
-   def DrawTree():
-
+    
+   def DrawTree(self, path=False, result=False):
+       """
+       Draw the Rapid-explored Random Tree and also draw the obstacle area
+       """
+       if result==False:
+           for node in self.nodelist:
+               if node.parent is not None:
+                   plt.plot([node.x, self.nodelist[node.parent].x], 
+                            [node.y, self.nodelist[node.parent].y], '-k')
+                   
+       else:
+           if (path == True):
+               plt.plot([x for (x, y) in self.path], [y for (x, y) in self.path], '-r')
+               plt.plot(self.start.x, self.start.y, 'ro')
+       
+       # plot the obstacle
+       ax = plt.gca()
+       ax.set_xlim((self.min_rand, self.max_rand))
+       ax.set_ylim((self.min_rand, self.max_rand))
+       
+       for (x, y, radius) in self.obstacle:
+           circle = plt.Circle((x, y), radius, color = 'b')
+           ax.add_artist(circle)
+       #plt.axis([self.min_rand, self.max_rand , self.min_rand, self.max_rand])
+       #plt.grid(True)
+       plt.show()
+       plt.pause(0.01)
+       
+       
+    
 class Node():
     """
     Node for RRT
@@ -142,6 +184,25 @@ class Node():
         self.parent = None
 
 def main():
-    rrt = RRT()
-    nodelist = rrt.GrowTree()
-    path = rrt.FindPath()
+    # set parameters for RRT
+    start = [0, 0]
+    goal = [9, 10]
+    obstacle = [
+        (3, 6, 1),
+        (3, 8, 1),
+        (10, 3, 2),
+        (7, 8, 1),
+        (9, 5, 2)
+    ]
+
+    # start planning
+    rrt = RRT(start, goal, stepsize=0.8, obstacle=obstacle, TreeArea=[0,15])
+    path = rrt.GrowTree()
+    if (path == True):
+        rrt.FindPath()
+    else:
+        pass
+    rrt.DrawTree(path = path, result=True)
+    
+if __name__ == '__main__':
+    main()
