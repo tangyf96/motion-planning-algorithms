@@ -39,7 +39,8 @@ class RRT():
 
    def GrowTree(self, regrow_flag = False):
        """
-       Grow the RRT and return the node list of tree
+       Grow the RRT , change the node list of tree and 
+       return the status of path. 
        
        """
        if regrow_flag == False:
@@ -125,7 +126,7 @@ class RRT():
         
    def CollisionCheck(self, node_new, new_obstacle = False):
        """
-       Check whether the path from new node to its parents collide with obstacles
+       Check whether the path from new node to its parents collides with obstacles
        """
        if (new_obstacle==True):
            obstacle = self.new_obstacle
@@ -147,7 +148,7 @@ class RRT():
     
    def FindPath(self):
        """
-       Find path from the goal node to start node
+       Find the path from the goal node to start node
        """
        
        index = len(self.nodelist) - 1
@@ -159,7 +160,7 @@ class RRT():
            #print(self.path)
            index = node_path.parent
        self.path.append([self.start.x, self.start.y])
-       #self.path_index.append(-1)
+       self.path_index.append(0)
     
     
    def DrawTree(self, path=False, result=False):
@@ -168,7 +169,7 @@ class RRT():
        """
        if result==False:
            for node in self.nodelist:
-               if node.parent is not None and node.flag == True:
+               if (node.parent is not None) and (node.flag == True):
                    plt.plot([node.x, self.nodelist[node.parent].x], 
                             [node.y, self.nodelist[node.parent].y], '-k')
                    
@@ -192,8 +193,17 @@ class RRT():
 
 
 class Replan_RRT(RRT):
+    """
+    Class for RRT replanning 
+    """
     def __init__(self, start, goal, stepsize, obstacle, TreeArea, old_path_index, new_obstacle, SampleRate=2, maxIter=250, nodelist = []):
-        super(Replan_RRT, self).__init__(start, goal, stepsize, obstacle, TreeArea, SampleRate=2, maxIter=250)
+        """
+        This is the initialization for class RRT
+        Parameters:
+            new_obstacle : a list to define new area of obstacle found in the existing path
+            old_path_index : the index of nodes in nodelist of the existing path
+        """
+        super(Replan_RRT, self).__init__(start, goal, stepsize, obstacle, TreeArea, SampleRate=2, maxIter=300)
         self.obstacle.extend(new_obstacle)
         self.new_obstacle = new_obstacle
         self.nodelist = nodelist
@@ -201,15 +211,54 @@ class Replan_RRT(RRT):
         self.path = [[self.goal.x, self.goal.y]]
         
     def InvalidateNodes(self):
-        for iter in range(len(self.old_path_index)):
+        """
+        Invalidate edges influenced by new obstacles and invalidated corresponding nodes
+        """
+        # invalidate nodes in original path
+        for node_index in reversed(self.old_path_index):
             # there might be a problem with copy
-            node = self.nodelist[self.old_path_index[iter]]
-            if (self.CollisionCheck(node, new_obstacle=True)):
-               self.nodelist[self.old_path_index[iter]].flag = False
+            node = self.nodelist[node_index]
+            
+            # pass the start node 
+            if (node.parent == None):
+                continue
+            # invalidate child nodes
+            if (self.nodelist[node.parent].flag == False):
+                self.nodelist[node_index].flag = False
+                continue
+            # invalidatate parent nodes
+            if not (self.CollisionCheck(node, new_obstacle=True)):
+               self.nodelist[node_index].flag = False
             else:
                 pass
+        
+        # invalidate nodes that are inside the obstacle and not part of the path
+        for node_index, node in enumerate(self.nodelist):
+            if node.parent == None:
+                continue
+            if (self.nodelist[node.parent].flag == False):
+                self.nodelist[node_index].flag = False
+                
+            if (node.flag != False):
+                for (x, y, radius) in self.new_obstacle:
+                    dist = math.sqrt((x - node.x)**2 + (y - node.y)**2)
+                    if dist <= radius:
+                        self.nodelist[node_index].flag = False
+                        #print('I find one in the obstacle')
+                        continue
+                    else:
+                        pass
+                    
+                    
+                    
+            #parent = self.nodelist[node.parent]
+            #if (parent.flag == False):
+            #    self.nodelist[self.old_path_index[iter]].flag = False
     
     def regrow(self):
+        """
+        regrow trees based on trimmed trees
+        """
         new_path = self.GrowTree(regrow_flag=True)
         return(new_path)
     
@@ -224,9 +273,12 @@ class Node():
         self.flag = True
 
 def main():
+    """
+    This is the main function for Replanning with RRTs
+    """
     # set parameters for RRT
     start = [0, 0]
-    goal = [14, 14]
+    goal = [12, 5]
     obstacle = [
         (3, 6, 1),
         (3, 8, 1),
@@ -235,7 +287,7 @@ def main():
         (9, 5, 2),
         (5, 5, 1)
     ]
-    new_obstacle = [(5, 11, 2)]
+    new_obstacle = [(11, 11, 2), (7, 6, 1)]
     # start initial planning
     rrt = RRT(start, goal, stepsize=1, obstacle=obstacle, TreeArea=[0,15])
     path = rrt.GrowTree()
@@ -246,16 +298,19 @@ def main():
     rrt.DrawTree(path = path, result=True)
     
     # start replanning
-    # nodelist = [], old_path_index
     replan_rrt = Replan_RRT(start,  goal, stepsize = 1, obstacle=obstacle, TreeArea=[0,15], 
                             nodelist=rrt.nodelist, old_path_index=rrt.path_index, 
                             new_obstacle=new_obstacle)
+    # trim existing trees
     replan_rrt.InvalidateNodes()
+    # regrow trees after trimming the old trees
     new_path = replan_rrt.regrow()
+    # find the new path
     if (new_path == True):
         replan_rrt.FindPath()
     else:
         pass
+    # draw the new path
     replan_rrt.DrawTree(path=new_path, result=True)
     
     
