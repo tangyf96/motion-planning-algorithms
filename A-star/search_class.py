@@ -5,15 +5,20 @@ Created on Thu Oct 11 20:37:14 2018
 
 @author: Yifan Tang
 email : tangyf96@outlook.com
+reference : https://www.redblobgames.com/pathfinding/a-star/
 """
 
+
 class SimpleGraph:
+    """
+    Simple graph realization using dictionary
+    """
     def __init__(self):
         self.edges = {}
         
     def neighbors(self, id):
         return self.edges[id]
-    
+ 
 class Grid:
     def __init__(self, width, height):
         self.width = width
@@ -34,6 +39,35 @@ class Grid:
         neighbors = filter(self.in_bounds, neighbors)
         neighbors = filter(self.passable, neighbors)
         return neighbors
+
+
+class GridWithWeights(Grid):
+    def __init__(self, width, height):
+        super().__init__(width, height)
+        self.weights = {}
+    
+    def cost(self, from_node, to_node): 
+        # get to_node's cost value, the default value is 1
+        return self.weights.get(to_node, 1)
+
+
+import heapq
+class PriorityQueue():
+    def __init__(self):
+        self.open_list = []
+    
+    def put(self, value, priority):
+        heapq.heappush(self.open_list, (priority, value))
+    
+    def pop(self):
+        """
+        return the value that has the highest priority
+        """
+        return heapq.heappop(self.open_list)[1]
+    
+    def empty(self):
+        return len(self.open_list) == 0
+
 
 def draw_grid(graph, width=2, **style):
     for y in range(graph.height):
