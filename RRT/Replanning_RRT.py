@@ -326,12 +326,17 @@ class Replan_RRT(RRT):
             # check if the new tree reach the existing old tree
             node_nearest_index, min_dist = self.FindNearestNode(self.nodelist, [node_new.x, node_new.y])
             if min_dist <= self.stepsize:
-                print("the algorithm finds a new path after %d steps" %step)
-                print("the new RRT that grows from the goal")
-                self.DrawTree(replan = True)
-                self.replan_nodelist.append(self.nodelist[node_nearest_index])
-                return True
-            
+                node_nearest = copy.deepcopy(self.nodelist[node_nearest_index])
+                node_nearest.parent = len(self.replan_nodelist) - 1
+#                print('node_nearest.parent is :', node_nearest.parent)
+#                print(self.nodelist[node_nearest_index].parent)
+                if not self.CollisionCheck(node_nearest, regrow=True):
+                
+                    print("the algorithm finds a new path after %d steps" %step)
+                    print("the new RRT that grows from the goal")
+                    self.DrawTree(replan = True)
+                    self.replan_nodelist.append(self.nodelist[node_nearest_index])
+                    return True
             if (step >= self.maxIter):
                 print('after', self.maxIter, "still don't find the new path")
                 return False
@@ -356,6 +361,7 @@ class Replan_RRT(RRT):
        self.path.append([node_path.x, node_path.y])
        
        index = self.replan_nodelist[-1].parent
+       
        while (self.nodelist[index].parent) is not None:
            node_path = self.nodelist[index]
            self.path.append([node_path.x, node_path.y])
