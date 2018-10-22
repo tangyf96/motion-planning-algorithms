@@ -63,6 +63,7 @@ def main():
     print()
     draw_grid(graph, width = 10, number = visited, start = start, goal = goal)
     print()
+    print(visited)
    
 if __name__ == '__main__':
     main()
