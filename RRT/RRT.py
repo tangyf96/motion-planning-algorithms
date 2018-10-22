@@ -184,7 +184,7 @@ class Node():
 def main():
     # set parameters for RRT
     start = [0, 0]
-    goal = [9, 10]
+    goal = [13, 13]
     obstacle = [
         (3, 6, 1),
         (3, 8, 1),

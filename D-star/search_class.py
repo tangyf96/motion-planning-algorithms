@@ -50,12 +50,15 @@ class Grid:
         """
         Add all Node objects into graph
         """
+#        iter = 1
         for x in range(self.width):
             for y in range(self.height):
+                print(iter)
                 new_node = Node(x,y)
                 if (x,y) in self.walls:
                     new_node.cost = 10000
                 self.node.append(Node(x,y))   
+#                iter += 1
     
     
     def in_bounds(self, id):
@@ -75,6 +78,7 @@ class Grid:
         # filter out the unreachable neighbors
         neighbors_id = filter(self.in_bounds, neighbors_id)
         neighbors_id = filter(self.passable, neighbors_id)
+        neighbors_id = list(neighbors_id)
         for node in self.node:
             if node.id in neighbors_id:
                 neighbors.append(node)
@@ -94,7 +98,7 @@ class GridWithWeights(Grid):
         the default value to diagonal traversal is 1.4
         the default value to horizontal or vertical traversal is 1
         """
-        if ( from_node[0] != to_node[0] or from_node[1] != to_node[1] ):
+        if ( from_node[0] != to_node[0] and from_node[1] != to_node[1] ):
             return self.weights.get(to_node, 1.4)
         else: 
             return self.weights.get(to_node, 1)
@@ -107,7 +111,7 @@ class GridWithWeights(Grid):
         index = self.node.index(node)
         if node.lower_state:
             # should use self.graph 
-            self.node[index].k_func = node.h_func
+            self.node[index].key_func = node.h_func
         
             
         
