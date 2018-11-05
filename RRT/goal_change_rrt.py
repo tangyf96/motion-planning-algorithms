@@ -4,7 +4,7 @@ Created on Nov 4 2018
 This is the program to move the robot followed the existing path
 @author: Yifan Tang
 """
-import math
+
 import operator
 from basic_rrt import *
 
@@ -30,15 +30,7 @@ class robot():
             self.cur_loc = next_loc
         else:
             print('start node is not the same as robot\'s current location')
-        """
-        delta_t = 0.001
-        while operator.eq(self.cur_loc, node_goal):
-            dist = math.sqrt((self.cur_loc[0] - node_goal[0]) ** 2 + (self.cur_loc[1] - node_goal[1]) ** 2)
-            if dist < self.velocity * delta_t:
-                self.cur_loc = node_goal
-            else:
-                self.cur_loc += delta_t * self.velocity
-        """
+
 
     def change_goal(self):
         change_prob = 0.3
@@ -50,9 +42,10 @@ class robot():
             return self.cur_goal
 
     def work(self):
-        work_time = 200
+        work_time = 40
         # make the initial plan
         path = self.find_path()
+
         robot_state = 1
         while work_time!=0:
             # try to change to new goal
@@ -62,9 +55,13 @@ class robot():
                 # replan
                 self.planner.start = Node(self.cur_loc[0], self.cur_loc[1])
                 self.planner.goal = Node(self.new_goal[0], self.new_goal[1])
-                self.planner.path = [self.new_goal[0], self.new_goal[1]]
+                self.planner.path = [[self.new_goal[0], self.new_goal[1]]]
                 path = self.find_path()
                 robot_state = 1
+                # draw the new path
+                for i in range(len(self.goal_list)):
+                    plt.plot(self.goal_list[i][0], self.goal_list[i][1], 'y*')
+                self.planner.DrawTree(find_path=True, result=True)
             else:
                 # move the robot to the next point
                 if robot_state < len(path):
@@ -76,14 +73,15 @@ class robot():
         flag = self.planner.GrowTree()
         if flag:
             self.planner.FindPath()
-        else:
-            pass
-        return self.planner.path.reverse()
+        new_path = self.planner.path
+        new_path.reverse()
+        print(new_path)
+        return new_path
 
 def main():
     # define the parameters for working space
     warehouse_area = [0, 15]
-    cargo_loc = [[2,7],[7,2],[14,7],[7,14],[9,10]]
+    cargo_loc = [[2,2],[12,4],[9,10]]
     # initialize instance for RRT planning
     start = [0, 0]
     goal = [9, 10]
