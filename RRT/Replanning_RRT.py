@@ -369,7 +369,7 @@ def main():
     else:
         pass
     rrt.DrawTree(path = path, result=True)
-    #return 0
+    # return 0
     # start replanning
     replan_rrt = Replan_RRT(start = start,  goal = goal, stepsize = 1, obstacle=obstacle, TreeArea=[0,15], 
                             nodelist=rrt.nodelist, old_path_index=rrt.path_index, 
