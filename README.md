@@ -8,7 +8,7 @@ This is the folder for motion planning algorithms practice.
    - A-star
       - A-star.py : Implement basic A-star algorithm
       - breadth_first_search.py : Implementation of breadth first search algorithm
-      - implementation.py : Useful classes forked from AtsushiSakai/PythonRobotics.git
+      - implementation.py : Useful classes for grid search forked from AtsushiSakai/PythonRobotics.git
       - search_class.py : Modified classes for A star algorithm
    - D-star
       - D_star.py : Implement basic D-star algorithm
