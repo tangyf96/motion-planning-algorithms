@@ -1,0 +1,4 @@
+*.xml
+*.log
+*.iml
+__pycache__
