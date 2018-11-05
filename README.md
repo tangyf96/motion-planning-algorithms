@@ -1,5 +1,16 @@
 # motion-planning-algorithms
-this is the folder for learning motion planning algorithms
-In the RRT folder, the RRT.py is the basic RRT planning algorithms. The Replanning_RRT.py is the replanning algorithm based on RRT.
-A-star folder includes basic A-star algorithm.
-D-star folder includes basic D-star algorithm. 
+This is the folder for motion planning algorithms practice. 
+- motion-planning-algorithms
+   - RRT
+      - basic_rrt.py : basis RRT planning algorithm
+      - Replanning_RRT.py : replanning RRT based on Dave Ferguson et.al, Replanning with RRTs, 2006 
+      - goal_change_rrt.py: Use basic RRT algorithm to plan robot's path and move the robot. The robot will replan the path if the goal changes.  
+   - A-star
+      - A-star.py : Implement basic A-star algorithm
+      - breadth_first_search.py : Implementation of breadth first search algorithm
+      - implementation.py : Useful classes forked from AtsushiSakai/PythonRobotics.git
+      - search_class.py : Modified classes for A star algorithm
+   - D-star
+      - D_star.py : Implement basic D-star algorithm
+      - search_class.py : Definition of useful classes for D start
+   - MATLAB_RRT: This is the initial MATLAB demo for basic RRT
