@@ -403,15 +403,11 @@ def main():
         rrt.FindPath()
     else:
         pass
-<<<<<<< HEAD
-    rrt.DrawTree(path = path, result=True)
-    # return 0
-=======
+
     # draw the whole tree for the initial planning
     rrt.DrawTree()
     # draw the initial path
     rrt.DrawTree(find_path = find_path, result=True)
->>>>>>> 9e1cf047c4578a6c6261fa5c48c3f7edf6122317
     # start replanning
     replan_rrt = Replan_RRT(start = start,  goal = goal, stepsize = 1, obstacle=obstacle, TreeArea=[0,15], 
                             nodelist=rrt.nodelist, old_path_index=rrt.path_index, 

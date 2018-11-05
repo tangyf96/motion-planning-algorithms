@@ -76,7 +76,7 @@ class RRT():
             # Check whether reach goal
             goal_dist = math.sqrt((node_new.x - self.goal.x) ** 2 + (node_new.y - self.goal.y) ** 2)
             if goal_dist <= self.stepsize:
-                print("The algorithm finds the goal after %d steps" %step)
+                print("The algorithm finds the goal after %d steps" % step)
                 return True
             # draw the graph after finding new node
             # self.DrawTree()
@@ -140,8 +140,8 @@ class RRT():
         """
        Draw the Rapid-explored Random Tree and also draw the obstacle area
        """
-        plt.plot(self.goal.x, self.goal.y, 'bo')
-        plt.plot(self.start.x, self.start.y, 'bo')
+        #plt.plot(self.goal.x, self.goal.y, 'ob')
+        plt.plot(self.start.x, self.start.y, 'ro')
         if result == False:
             for node in self.nodelist:
                 if node.parent is not None:
