@@ -88,7 +88,6 @@ class RRT():
            if (step >= self.maxIter):
                print('after ', self.maxIter, "still don't find the goal")
                return False
-
             
    def FindNearestNode(self, nodelist, node_rnd, mode = "Euclidean"):
        """
@@ -122,31 +121,39 @@ class RRT():
        return node_index, min_dist
      
         
+
    def CollisionCheck(self, node_new, new_obstacle = False, regrow = False):
        """
        Check whether the path from new node to its parents collides with obstacles
        If there is Collision, return True;
        """
-       if (new_obstacle==True):
+       # check only new obstacles or all of the obstacles
+       if (new_obstacle):
            obstacle = self.new_obstacle
        else:
            obstacle = self.obstacle
-           
+       # Use different nodelist for initial plan and replan
        if regrow:
            node_parent = self.replan_nodelist[node_new.parent]
        else:
            node_parent = self.nodelist[node_new.parent]
-           
+       # calculate gradient and intercept of the edge from parent to child node
        gradient = (node_new.y - node_parent.y) / (node_new.x - node_parent.x)
        intercept = (node_new.x * node_parent.y - node_new.y * node_parent.x) / (node_new.x - node_parent.x)
-       
+
        for (x, y, radius) in obstacle: 
-           dist = math.sqrt((x - node_new.x)**2 + (y - node_new.y)**2)
-           dist2 = (gradient * x - y + intercept) / math.sqrt(gradient**2 + 1)
-           if dist <= radius:
+           # dist1 is the distance from new node to the center of obstacle
+           dist1 = math.sqrt((x - node_new.x)**2 + (y - node_new.y)**2)
+           
+           # cross flag and dist2 is used to decide whether the 
+           # edge between parent and node_new cross the obstacle
+           cross_flag = ((node_new.x - x) * (node_parent.x - x))<=0 or ((node_new.y - y) * (node_parent.y - y)) <=0 
+           # dist2 is the distance from center of obstacle to the edge linking parent and child
+           dist2 = abs(gradient * x - y + intercept) / math.sqrt(gradient**2 + 1)
+           if dist1 <= radius:
                #print('dist is smaller than radius')
                return True
-           elif dist2 <= radius:
+           elif dist2 <= radius and cross_flag:
                #print('dist2 is smaller than radius')
                return True
        return False
@@ -169,20 +176,33 @@ class RRT():
        self.path_index.append(0)
     
     
-   def DrawTree(self, path=False, result=False, replan = False):
+   def DrawTree(self, find_path=False, result=False, replan = False):
        """
        Draw the Rapid-explored Random Tree and also draw the obstacle area
+       result : True means this function should draw the final path; False means this function is used to draw the existing tree
+       path: whether the path is find
+       replan: True means this function draws the replanning part of tree
        """
-       if result==False:
-           for node in self.nodelist:
-               if (node.parent is not None) and (node.flag == True):
-                   plt.plot([node.x, self.nodelist[node.parent].x], 
-                            [node.y, self.nodelist[node.parent].y], '-k')
-                   
+       
+       plt.plot(self.start.x, self.start.y, 'ro')
+       plt.plot(self.goal.x, self.goal.y, 'ro')
+       if replan:
+           plt.plot(self.temp_start.x, self.temp_start.y, 'ro')
+
+       
+       if not replan:
+           nodelist = self.nodelist
        else:
-           if (path == True):
+           nodelist = self.replan_nodelist
+           
+       if result:
+           if (find_path == True):
                plt.plot([x for (x, y) in self.path], [y for (x, y) in self.path], '-r')
-               plt.plot(self.start.x, self.start.y, 'ro')
+       else:
+           for node in nodelist:
+               if (node.parent is not None) and (node.flag == True):
+                   plt.plot([node.x, nodelist[node.parent].x], 
+                            [node.y, nodelist[node.parent].y], '-k')    
        
        # plot the obstacle
        ax = plt.gca()
@@ -202,20 +222,25 @@ class Replan_RRT(RRT):
     """
     Class for RRT replanning 
     """
-    def __init__(self, start, goal, stepsize, obstacle, TreeArea, old_path_index, new_obstacle, SampleRate=2, maxIter=250, nodelist = []):
+    def __init__(self, start, goal, stepsize, obstacle, TreeArea, old_path_index, new_obstacle, SampleRate=2, maxIter=500, nodelist = []):
         """
         This is the initialization for class RRT
         Parameters:
-            new_obstacle : a list to define new area of obstacle found in the existing path
+            new_obstacle : a list to define new area of obstacle
             old_path_index : the index of nodes in nodelist of the existing path
+            replan_nodelist : the nodelist to store the replanning tree
+            path: the list to store new path
+            temp_start : temporary start node for replanning, which is the goal for initial RRT
         """
-        super(Replan_RRT, self).__init__(start, goal, stepsize, obstacle, TreeArea, SampleRate=2, maxIter=300)
+        super(Replan_RRT, self).__init__(start, goal, stepsize, obstacle, TreeArea, SampleRate=2, maxIter=500)
         self.obstacle.extend(new_obstacle)
         self.new_obstacle = new_obstacle
         self.nodelist = nodelist
         self.replan_nodelist = []
         self.old_path_index = old_path_index
-        self.path = [[self.goal.x, self.goal.y]]
+        self.temp_start = self.goal
+        #self.path = [[self.goal.x, self.goal.y]]
+        self.path = []
         
     def InvalidateNodes(self):
         """
@@ -263,10 +288,12 @@ class Replan_RRT(RRT):
         """
 
         self.replan_nodelist.append(self.goal)
+        # reverse the direction of growth
         # find the nearest node of old tree 
         # and set it as the goal for the search
         index, _ = self.FindNearestNode(self.nodelist, [self.goal.x, self.goal.y], mode = "Euclidean")
         self.goal = self.nodelist[index]
+        
                
         step = 0
         while True:
@@ -283,57 +310,65 @@ class Replan_RRT(RRT):
             node_nearest = self.replan_nodelist[node_nearest_index]
             # expand tree
             theta = math.atan2(node_rnd[1] - node_nearest.y, node_rnd[0] - node_nearest.x)
-            
+            # generate new node based on the orientation of between random point and its nearest node
             node_new = copy.deepcopy(node_nearest)
             node_new.x += self.stepsize * math.cos(theta)
             node_new.y += self.stepsize * math.sin(theta)
             #print('new node is :', node_new.x, node_new.y)
             node_new.parent = node_nearest_index
             
+            # check collision, if there is collision, return True
             if self.CollisionCheck(node_new, regrow = True):
                 continue
             #print('after collision check')
             self.replan_nodelist.append(node_new)
             
-            # check if the new tree reach the existing tree
+            # check if the new tree reach the existing old tree
             node_nearest_index, min_dist = self.FindNearestNode(self.nodelist, [node_new.x, node_new.y])
             if min_dist <= self.stepsize:
-                print("the algorithm finds the new path after %d steps" %step)
+                node_nearest = copy.deepcopy(self.nodelist[node_nearest_index])
+                node_nearest.parent = len(self.replan_nodelist) - 1
+#                print('node_nearest.parent is :', node_nearest.parent)
+#                print(self.nodelist[node_nearest_index].parent)
+                if not self.CollisionCheck(node_nearest, regrow=True):
                 
-                self.replan_nodelist.append(self.nodelist[node_nearest_index])
-                return True
-                break
-            
+                    print("the algorithm finds a new path after %d steps" %step)
+                    print("the new RRT that grows from the goal")
+                    self.DrawTree(replan = True)
+                    self.replan_nodelist.append(self.nodelist[node_nearest_index])
+                    return True
             if (step >= self.maxIter):
                 print('after', self.maxIter, "still don't find the new path")
                 return False
-                break
         
     def FindPath(self):
        """
        Find the path from the goal node to start node
        """
-       # find the path through the new tree
-       # find the path from the final node added to the nodelist of new tree
+       # find the path in the new tree
+       # find the path from the final node added into replan_nodelist
        index = -2
        while (self.replan_nodelist[index].parent) is not None:
            node_path = self.replan_nodelist[index]
            self.path.append([node_path.x, node_path.y])
            index = node_path.parent
-
+       # add the temporary start node for replanning to the path, which is the goal for the initial planning
+       self.path.append([self.temp_start.x, self.temp_start.y])
+       self.path.reverse()
        # find the path through the old tree
        # replan_nodelist[-1] is the node of old tree that is closest to the end of new_tree
        node_path = self.replan_nodelist[-1]
        self.path.append([node_path.x, node_path.y])
+       
        index = self.replan_nodelist[-1].parent
+       
        while (self.nodelist[index].parent) is not None:
            node_path = self.nodelist[index]
            self.path.append([node_path.x, node_path.y])
            index = node_path.parent
+           
        self.path.append([self.start.x, self.start.y])
-
-       # connect two path
-
+       
 class Node():
     """
     Node for RRT
@@ -351,40 +386,49 @@ def main():
     # set parameters for RRT
     start = [0, 0]
     #goal = [11, 5]
-    goal = [14, 14]
+    goal = [13, 13]
     obstacle = [
         (3, 6, 1),
         (3, 8, 1),
         (10, 3, 2),
         (7, 8, 1),
-        (9, 5, 1),
-        (5, 5, 1)
+        (9, 5, 2),
+        (5, 5, 1),
     ]
-    new_obstacle = [(11, 11, 2), (7, 6, 1)]
+    new_obstacle = [(5, 11, 2), (7, 6, 1)]
     # start initial planning
-    rrt = RRT(start, goal, stepsize=2, obstacle=obstacle, TreeArea=[0,15])
-    path = rrt.GrowTree()
-    if (path == True):
+    rrt = RRT(start, goal, stepsize=1, obstacle=obstacle, TreeArea=[0,15])
+    find_path = rrt.GrowTree()
+    if (find_path == True):
         rrt.FindPath()
     else:
         pass
+<<<<<<< HEAD
     rrt.DrawTree(path = path, result=True)
     # return 0
+=======
+    # draw the whole tree for the initial planning
+    rrt.DrawTree()
+    # draw the initial path
+    rrt.DrawTree(find_path = find_path, result=True)
+>>>>>>> 9e1cf047c4578a6c6261fa5c48c3f7edf6122317
     # start replanning
     replan_rrt = Replan_RRT(start = start,  goal = goal, stepsize = 1, obstacle=obstacle, TreeArea=[0,15], 
                             nodelist=rrt.nodelist, old_path_index=rrt.path_index, 
                             new_obstacle=new_obstacle)
+    # return 0
     # trim existing trees
     replan_rrt.InvalidateNodes()
     # regrow trees after trimming the old trees
-    new_path = replan_rrt.regrow()
+    find_path = replan_rrt.regrow()
     # find the new path
-    if (new_path == True):
+    if (find_path == True):
         replan_rrt.FindPath()
-
+    else:
+        pass
     # draw the new path
-    replan_rrt.DrawTree(path=new_path, result=True)
-    
+    print("The final replanning path")
+    replan_rrt.DrawTree(find_path=find_path, result=True, replan = True)
     
 if __name__ == '__main__':
     main()

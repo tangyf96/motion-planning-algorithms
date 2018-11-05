@@ -18,6 +18,7 @@ reference : https://www.redblobgames.com/pathfinding/a-star/
 #        
 #    def neighbors(self, id):
 #        return self.edges[id]
+import operator
 
 class Node:
     def __init__(self, x, y, h = 0):
@@ -31,11 +32,15 @@ class Node:
         self.key_func = h
         self.cost = 1
         self.lower_state = True
+        self.back_pointer = None
     
-    def __eq__(self, other):
-        print(self)
-        print(other)
-        return self.id == other.id
+    def __lt__(self, other):
+        return self.key_func < other.key_func
+    
+    def eq(self, other):
+        #print(self.id)
+        #print(other.id)
+        return operator.eq(self.id, other.id)
         
         
 class Grid:
@@ -50,12 +55,15 @@ class Grid:
         """
         Add all Node objects into graph
         """
+#        iter = 1
         for x in range(self.width):
             for y in range(self.height):
+                #print(iter)
                 new_node = Node(x,y)
                 if (x,y) in self.walls:
                     new_node.cost = 10000
                 self.node.append(Node(x,y))   
+#                iter += 1
     
     
     def in_bounds(self, id):
@@ -75,6 +83,7 @@ class Grid:
         # filter out the unreachable neighbors
         neighbors_id = filter(self.in_bounds, neighbors_id)
         neighbors_id = filter(self.passable, neighbors_id)
+        neighbors_id = list(neighbors_id)
         for node in self.node:
             if node.id in neighbors_id:
                 neighbors.append(node)
@@ -94,7 +103,7 @@ class GridWithWeights(Grid):
         the default value to diagonal traversal is 1.4
         the default value to horizontal or vertical traversal is 1
         """
-        if ( from_node[0] != to_node[0] or from_node[1] != to_node[1] ):
+        if ( from_node[0] != to_node[0] and from_node[1] != to_node[1] ):
             return self.weights.get(to_node, 1.4)
         else: 
             return self.weights.get(to_node, 1)
@@ -107,7 +116,7 @@ class GridWithWeights(Grid):
         index = self.node.index(node)
         if node.lower_state:
             # should use self.graph 
-            self.node[index].k_func = node.h_func
+            self.node[index].key_func = node.h_func
         
             
         
@@ -136,6 +145,10 @@ class PriorityQueue():
     
     def empty(self):
         return len(self.open_list) == 0
+    
+    def remove(self, item, new_priority):
+        self.open_list.remove((item.key_func, item))
+        
 
 
 def draw_grid(graph, width=2, **style):
@@ -146,7 +159,7 @@ def draw_grid(graph, width=2, **style):
         
 def draw_tile(graph, id, style, width):
     r = "."
-    if 'number' in style and id in style['number']: r = "%d" % style['number'][id]
+    if 'number' in style and id in style['number']: r ="%.1f" % float(style['number'][id])
     if 'point_to' in style and style['point_to'].get(id, None) is not None:
         (x1, y1) = id
         (x2, y2) = style['point_to'][id]
@@ -154,8 +167,8 @@ def draw_tile(graph, id, style, width):
         if x2 == x1 - 1: r = "<"
         if y2 == y1 + 1: r = "v"
         if y2 == y1 - 1: r = "^"
-    if 'start' in style and id == style['start']: r = "A"
-    if 'goal' in style and id == style['goal']: r = "Z"
+    if 'start' in style and id == style['start']: r = "Start"
+    if 'goal' in style and id == style['goal']: r = "Goal"
     if 'path' in style and id in style['path']: r = "@"
     if id in graph.walls: r = "#" * width
     return r
