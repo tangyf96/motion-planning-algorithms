@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """
+Created on Nov 4 2018
 This is the program to move the robot followed the existing path
 @author: Yifan Tang
 """
 
 import time
 import operator
-from basic_rrt import *
+from rrt_star import *
 
 
 class Robot:
@@ -43,7 +44,7 @@ class Robot:
         :param: change_prob: the probability of goal change
         :return: new goal's location list [new_goal.x, new_goal.y]
         """
-        change_prob = 0.2
+        change_prob = 0.15
         if random.random() < change_prob:
             index = self.goal_list.index(self.cur_goal)
             new_goal = self.goal_list[random.choice([x for x in range(0, len(self.goal_list)) if x != index])]
@@ -53,15 +54,31 @@ class Robot:
 
     def find_path(self):
         """
-        Use the RRT planner to plan the path
+        Use the RRT star planner to plan the path
         :return: the path list
         """
-        flag = self.planner.GrowTree()
-        if flag:
-            self.planner.FindPath()
-        new_path = self.planner.path
+        new_path = self.planner.Planning()
+        if new_path is None:
+            print("Can't find the path")
+            return None
         new_path.reverse()
         return new_path
+
+    def draw_path(self, path):
+        for i in range(len(self.goal_list)):
+            plt.plot(self.goal_list[i][0], self.goal_list[i][1], 'y*')
+        plt.plot([x for (x, y) in path], [y for (x, y) in path], '-r')
+        plt.plot(self.cur_loc[0], self.cur_loc[1], 'go')
+        plt.plot(self.planner.start.x, self.planner.start.y, 'bo')
+        plt.plot(self.planner.goal.x, self.planner.goal.y, 'bo')
+        '''
+        for (ox, oy, size) in self.planner.obstacleList:
+        plt.plot(ox, oy, "ok", ms=30 * size)
+        '''
+        ax = plt.gca()
+        ax.set_xlim((self.planner.minrand, self.planner.maxrand))
+        ax.set_ylim((self.planner.minrand, self.planner.maxrand))
+        plt.show()
 
     def work(self):
         """
@@ -87,43 +104,41 @@ class Robot:
                 path = self.find_path()
                 robot_state = 1
                 # draw the new path
-                self.draw_path()
+                self.draw_path(path=path)
+                plt.pause(0.1)
             else:
                 # move the robot to the next point
                 if robot_state < len(path):
                     self.move(self.cur_loc, path[robot_state])
-                    self.draw_path()
+                    self.draw_path(path)
+                    plt.pause(0.5)
                     robot_state += 1
                 else:
                     print("the robot reach the goal!:", self.cur_goal)
             work_time -= 1
             time.sleep(1)
 
-    def draw_path(self):
-        for i in range(len(self.goal_list)):
-            plt.plot(self.goal_list[i][0], self.goal_list[i][1], 'y*')
-        plt.plot(self.cur_loc[0], self.cur_loc[1], 'bo')
-        plt.plot(self.cur_goal[0], self.cur_goal[1], 'ro')
-        self.planner.DrawTree(find_path=True, result=True)
-
 def main():
     # define the parameters for working space
-    warehouse_area = [0, 15]
-    cargo_loc = [[2, 2], [12, 4], [9, 10]]
+    warehouse_area = [0, 50]
+    cargo_loc = [[25, 5], [10, 40], [40, 40]]
+    '''
+        obstacleList = [
+        (25, 25, 2),
+        (30, 6, 2),
+        (5, 10, 2),
+        (7, 5, 2),
+        (30, 40, 2)
+    ]
+    '''
+
     # initialize instance for RRT planning
     start = [0, 0]
-    goal = [9, 10]
-    obstacle = [
-        (3, 6, 1),
-        (3, 8, 1),
-        (10, 3, 2),
-        (7, 8, 1),
-        (9, 5, 2),
-        (5, 5, 1)
-    ]
-    rrt = RRT(start=start, goal=goal, stepsize=1, obstacle=obstacle, TreeArea = warehouse_area)
+    goal = [40, 40]
+    # rrt_star = RRT(start=start, goal=goal, obstacleList=obstacleList, randArea = warehouse_area)
+    rrt_star = RRT(start=start, goal=goal, randArea = warehouse_area)
     # initialize instance for the robot working in the space
-    robot1 = Robot(start=start, goal_list=cargo_loc, planner=rrt)
+    robot1 = Robot(start=start, goal_list=cargo_loc, planner=rrt_star)
     # start working
     robot1.work()
 
