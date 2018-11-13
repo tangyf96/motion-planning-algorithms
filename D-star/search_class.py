@@ -30,7 +30,6 @@ class Node:
         self.id = (x,y)
         self.h_func = h
         self.key_func = h
-        self.cost = 1
         self.lower_state = True
         self.back_pointer = None
     
@@ -48,7 +47,7 @@ class Grid:
         self.width = width
         self.height = height
         self.walls = []
-        self.node = []
+        self.node_list = []
         self.addNodeToGraph()
     
     def addNodeToGraph(self):
@@ -62,7 +61,7 @@ class Grid:
                 new_node = Node(x,y)
                 if (x,y) in self.walls:
                     new_node.cost = 10000
-                self.node.append(Node(x,y))   
+                self.node_list.append(Node(x,y))   
 #                iter += 1
     
     
@@ -75,17 +74,19 @@ class Grid:
     
     def neighbors(self, node):
         """
-        Find the neighbor of node and return node list of neighbors
+        Find the neighbor of node and return the index of neighbors in the node list
         """
         (x, y) = node.id
         neighbors = []
+        #neighbors_index = []
         neighbors_id = [(x, y+1), (x+1, y), (x, y-1), (x-1, y), (x+1, y+1), (x+1, y-1), (x-1, y+1), (x-1, y-1)]
         # filter out the unreachable neighbors
         neighbors_id = filter(self.in_bounds, neighbors_id)
         neighbors_id = filter(self.passable, neighbors_id)
         neighbors_id = list(neighbors_id)
-        for node in self.node:
+        for node in self.node_list:
             if node.id in neighbors_id:
+                #neighbors_index.append(index)
                 neighbors.append(node)
             else:
                 pass
@@ -95,6 +96,9 @@ class Grid:
 class GridWithWeights(Grid):
     def __init__(self, width, height):
         super().__init__(width, height)
+        # not using weights for current algorithm
+        # weight is used to change the edge cost of new obstacle
+        # should think about it!!
         self.weights = {}
     
     def cost(self, from_node, to_node): 
@@ -113,19 +117,11 @@ class GridWithWeights(Grid):
         Calculate the key function which serves as the priority function of the state
         Not finished the part for raise state
         """
-        index = self.node.index(node)
+        index = self.node_list.index(node)
         if node.lower_state:
             # should use self.graph 
-            self.node[index].key_func = node.h_func
+            self.node_list[index].key_func = node.h_func
         
-            
-        
-    def set_dynamic_obstacle(self, obstacle):
-        """
-        Set the cost value of obstacle
-        """
-        for item in obstacle:
-            self.weights[item] = 10000
 
 
 

@@ -2,3 +2,4 @@
 *.log
 *.iml
 __pycache__
+.vscode

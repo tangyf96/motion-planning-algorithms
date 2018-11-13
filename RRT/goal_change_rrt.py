@@ -24,7 +24,7 @@ class Robot:
         self.cur_loc = start
         self.cur_goal = [planner.goal.x, planner.goal.y]
         self.new_goal = self.cur_goal
-        self.goal_list = goal_list
+        self.cur_goal_list = goal_list
         self.planner = planner
 
     def move(self, start_loc, next_loc):
@@ -46,8 +46,8 @@ class Robot:
         """
         change_prob = 0.1
         if random.random() < change_prob:
-            index = self.goal_list.index(self.cur_goal)
-            new_goal = self.goal_list[random.choice([x for x in range(0, len(self.goal_list)) if x != index])]
+            index = self.cur_goal_list.index(self.cur_goal)
+            new_goal = self.cur_goal_list[random.choice([x for x in range(0, len(self.cur_goal_list)) if x != index])]
             return new_goal
         else:
             return self.cur_goal
@@ -88,8 +88,8 @@ class Robot:
                 path = self.find_path()
                 robot_state = 1
                 # draw the new path
-                for i in range(len(self.goal_list)):
-                    plt.plot(self.goal_list[i][0], self.goal_list[i][1], 'y*')
+                for i in range(len(self.cur_goal_list)):
+                    plt.plot(self.cur_goal_list[i][0], self.cur_goal_list[i][1], 'y*')
                 self.planner.DrawTree(find_path=True, result=True)
             else:
                 # move the robot to the next point
