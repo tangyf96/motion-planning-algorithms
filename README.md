@@ -13,4 +13,3 @@ This is the folder for motion planning algorithms practice.
    - D-star
       - D_star.py : Implement basic D-star algorithm
       - search_class.py : Definition of useful classes for D start
-   - MATLAB_RRT: This is the initial MATLAB demo for basic RRT
