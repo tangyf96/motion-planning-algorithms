@@ -23,7 +23,7 @@ class Robot:
         self.cur_loc = start
         self.cur_goal = [planner.goal.x, planner.goal.y]
         self.new_goal = self.cur_goal
-        self.goal_list = goal_list
+        self.cur_goal_list = goal_list
         self.planner = planner
 
     def move(self, start_loc, next_loc):
@@ -45,8 +45,8 @@ class Robot:
         """
         change_prob = 0.2
         if random.random() < change_prob:
-            index = self.goal_list.index(self.cur_goal)
-            new_goal = self.goal_list[random.choice([x for x in range(0, len(self.goal_list)) if x != index])]
+            index = self.cur_goal_list.index(self.cur_goal)
+            new_goal = self.cur_goal_list[random.choice([x for x in range(0, len(self.cur_goal_list)) if x != index])]
             return new_goal
         else:
             return self.cur_goal

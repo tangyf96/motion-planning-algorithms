@@ -64,7 +64,7 @@ class RRT():
             if animation:
                 self.DrawGraph(rnd)
 
-        # generate coruse
+        # generate course
         lastIndex = self.get_best_last_index()
         if lastIndex is None:
             return None
@@ -155,7 +155,7 @@ class RRT():
         #  r = self.expandDis * 5.0
         dlist = [(node.x - newNode.x) ** 2 +
                  (node.y - newNode.y) ** 2 for node in self.nodeList]
-        nearinds = [dlist.index(i) for i in dlist if i <= r ** 2]
+        nearinds = [dlist.index(i) for i in dlist if i <= r ** 2 and i >= 1e-3]
         return nearinds
 
     def rewire(self, newNode, nearinds):

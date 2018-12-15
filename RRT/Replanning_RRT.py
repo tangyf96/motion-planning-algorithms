@@ -26,14 +26,14 @@ class RRT():
            maxIter : the maximum iteration number
        """
        self.start = Node(start[0], start[1])
-       self.goal = Node(goal[0], goal[1])
+       self.cur_goal = Node(goal[0], goal[1])
        self.stepsize = stepsize
        self.obstacle = obstacle
        self.min_rand = TreeArea[0]
        self.max_rand = TreeArea[1]
        self.SampleRate = SampleRate
        self.maxIter = maxIter
-       self.path = [[self.goal.x, self.goal.y]]
+       self.path = [[self.cur_goal.x, self.cur_goal.y]]
        self.path_index = []
        self.nodelist = []
 
@@ -55,7 +55,7 @@ class RRT():
                node_rnd = [random.uniform(self.min_rand, self.max_rand),
                            random.uniform(self.min_rand, self.max_rand)]
            else:
-               node_rnd = [self.goal.x, self.goal.y]
+               node_rnd = [self.cur_goal.x, self.cur_goal.y]
            
            # Find the nearest node
            node_nearest_index, _ = self.FindNearestNode(self.nodelist, node_rnd, mode = "Euclidean")
@@ -78,7 +78,7 @@ class RRT():
            self.nodelist.append(node_new)
            
            # Check whether reach goal
-           goal_dist = math.sqrt((node_new.x - self.goal.x)**2 + (node_new.y - self.goal.y)**2)
+           goal_dist = math.sqrt((node_new.x - self.cur_goal.x)**2 + (node_new.y - self.cur_goal.y)**2)
            if goal_dist <= self.stepsize:
                print("The algorithm finds the goal after %d steps" %step)
                return True
@@ -185,7 +185,7 @@ class RRT():
        """
        
        plt.plot(self.start.x, self.start.y, 'ro')
-       plt.plot(self.goal.x, self.goal.y, 'ro')
+       plt.plot(self.cur_goal.x, self.cur_goal.y, 'ro')
        if replan:
            plt.plot(self.temp_start.x, self.temp_start.y, 'ro')
 
@@ -238,8 +238,8 @@ class Replan_RRT(RRT):
         self.nodelist = nodelist
         self.replan_nodelist = []
         self.old_path_index = old_path_index
-        self.temp_start = self.goal
-        #self.path = [[self.goal.x, self.goal.y]]
+        self.temp_start = self.cur_goal
+        #self.path = [[self.cur_goal.x, self.cur_goal.y]]
         self.path = []
         
     def InvalidateNodes(self):
@@ -287,12 +287,12 @@ class Replan_RRT(RRT):
         regrow trees based on trimmed trees
         """
 
-        self.replan_nodelist.append(self.goal)
+        self.replan_nodelist.append(self.cur_goal)
         # reverse the direction of growth
         # find the nearest node of old tree 
         # and set it as the goal for the search
-        index, _ = self.FindNearestNode(self.nodelist, [self.goal.x, self.goal.y], mode = "Euclidean")
-        self.goal = self.nodelist[index]
+        index, _ = self.FindNearestNode(self.nodelist, [self.cur_goal.x, self.cur_goal.y], mode = "Euclidean")
+        self.cur_goal = self.nodelist[index]
         
                
         step = 0
@@ -303,7 +303,7 @@ class Replan_RRT(RRT):
                 node_rnd = [random.uniform(self.min_rand, self.max_rand), 
                             random.uniform(self.min_rand, self.max_rand)]
             else:
-                node_rnd = [self.goal.x, self.goal.y]
+                node_rnd = [self.cur_goal.x, self.cur_goal.y]
                 
             node_nearest_index, _ = self.FindNearestNode(self.replan_nodelist, node_rnd, mode = "Euclidean")
             

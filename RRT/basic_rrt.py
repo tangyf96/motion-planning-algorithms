@@ -28,14 +28,14 @@ class RRT():
            maxIter : the maximum iteration number
        """
         self.start = Node(start[0], start[1])
-        self.goal = Node(goal[0], goal[1])
+        self.cur_goal = Node(goal[0], goal[1])
         self.stepsize = stepsize
         self.obstacle = obstacle
         self.min_rand = TreeArea[0]
         self.max_rand = TreeArea[1]
         self.SampleRate = SampleRate
         self.maxIter = maxIter
-        self.path = [[self.goal.x, self.goal.y]]
+        self.path = [[self.cur_goal.x, self.cur_goal.y]]
 
     def GrowTree(self):
         """
@@ -50,7 +50,7 @@ class RRT():
                 node_rnd = [random.uniform(self.min_rand, self.max_rand),
                             random.uniform(self.min_rand, self.max_rand)]
             else:
-                node_rnd = [self.goal.x, self.goal.y]
+                node_rnd = [self.cur_goal.x, self.cur_goal.y]
 
             # Find the nearest node
             node_nearest_index = self.FindNearestNode(self.nodelist, node_rnd, mode="Mahattan")
@@ -74,7 +74,7 @@ class RRT():
             self.nodelist.append(node_new)
 
             # Check whether reach goal
-            goal_dist = math.sqrt((node_new.x - self.goal.x) ** 2 + (node_new.y - self.goal.y) ** 2)
+            goal_dist = math.sqrt((node_new.x - self.cur_goal.x) ** 2 + (node_new.y - self.cur_goal.y) ** 2)
             if goal_dist <= self.stepsize:
                 print("The algorithm finds the goal after %d steps" % step)
                 return True
@@ -140,7 +140,7 @@ class RRT():
         """
        Draw the Rapid-explored Random Tree and also draw the obstacle area
        """
-        #plt.plot(self.goal.x, self.goal.y, 'ob')
+        #plt.plot(self.cur_goal.x, self.cur_goal.y, 'ob')
         plt.plot(self.start.x, self.start.y, 'ro')
         if result == False:
             for node in self.nodelist:
@@ -169,9 +169,8 @@ class RRT():
 
 class Node():
     """
-    Node for RRT
+    Node for flexible RRT
     """
-
     def __init__(self, x, y):
         self.x = x
         self.y = y
