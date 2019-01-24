@@ -7,8 +7,13 @@ This is the program to move the robot followed the existing path
 
 import time
 import operator
-from rrt_star import *
+import random
+import math
+import copy
+import numpy as np
+import matplotlib.pyplot as plt
 
+from rrt_star import RRT, Node
 
 class Robot:
     def __init__(self, start, goal_list=[], planner=None):
@@ -22,7 +27,7 @@ class Robot:
         self.name = "robot1"
         self.start = start
         self.cur_loc = start
-        self.cur_goal = [planner.goal.x, planner.goal.y]
+        self.cur_goal = [planner.cur_goal.x, planner.cur_goal.y]
         self.new_goal = self.cur_goal
         self.goal_list = goal_list
         self.planner = planner
@@ -57,11 +62,10 @@ class Robot:
         Use the RRT star planner to plan the path
         :return: the path list
         """
-        new_path = self.planner.Planning()
+        new_path = self.planner.planning()
         if new_path is None:
             print("Can't find the path")
             return None
-        new_path.reverse()
         return new_path
 
     def draw_path(self, path):
@@ -70,14 +74,14 @@ class Robot:
         plt.plot([x for (x, y) in path], [y for (x, y) in path], '-r')
         plt.plot(self.cur_loc[0], self.cur_loc[1], 'go')
         plt.plot(self.planner.start.x, self.planner.start.y, 'bo')
-        plt.plot(self.planner.goal.x, self.planner.goal.y, 'bo')
+        plt.plot(self.planner.cur_goal.x, self.planner.cur_goal.y, 'bo')
         '''
         for (ox, oy, size) in self.planner.obstacleList:
         plt.plot(ox, oy, "ok", ms=30 * size)
         '''
         ax = plt.gca()
-        ax.set_xlim((self.planner.minrand, self.planner.maxrand))
-        ax.set_ylim((self.planner.minrand, self.planner.maxrand))
+        ax.set_xlim((self.planner.min_rand, self.planner.max_rand))
+        ax.set_ylim((self.planner.min_rand, self.planner.max_rand))
         plt.show()
 
     def work(self):
@@ -95,10 +99,11 @@ class Robot:
             self.new_goal = self.change_goal()
             # if goal change
             if operator.ne(self.cur_goal, self.new_goal):
-                # replanW
+                # replan
                 self.planner.start = Node(self.cur_loc[0], self.cur_loc[1])
-                self.planner.goal = Node(self.new_goal[0], self.new_goal[1])
-                self.planner.path = [[self.new_goal[0], self.new_goal[1]]]
+                self.planner.cur_goal = Node(self.new_goal[0], self.new_goal[1])
+                #self.planner.path = [[self.new_goal[0], self.new_goal[1]]]
+                self.planner.reset()
                 print("the goal change from", self.cur_goal, "to", self.new_goal)
                 self.cur_goal = self.new_goal
                 path = self.find_path()

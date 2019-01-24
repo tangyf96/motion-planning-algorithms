@@ -4,12 +4,10 @@ This is the simple Rapidly-Exploring Random Trees algorithms
 
 @author: Yifan Tang
 """
-
 import matplotlib.pyplot as plt
 import random
 import math
 import copy
-
 
 class RRT():
     """

@@ -16,7 +16,7 @@ class fRRT():
     """
     Class for flexible RRT planning
     """
-    def __init__(self, start, cur_goal, goal_list = [], obstacle = [], TreeArea = [], trans_prob = [], stepsize = 0.5, SampleRate = 2, maxIter = 500):
+    def __init__(self, start, cur_goal, goal_list = [], obstacle = [], TreeArea = [], trans_prob = [], stepsize = 0.5, SampleRate = 2, maxIter = 1000):
         """
        This is the initialization for class RRT
        Parameters:
@@ -44,6 +44,32 @@ class fRRT():
         for (x, y) in goal_list:
             self.goal_list.append(Node(x, y))
         print("initialize frrt object")
+
+    def planning(self):
+        """
+        Path planning
+        """
+        self.grow_tree()
+        # find the closest node to the goal
+        best_node_ind = self.get_best_node()
+        if best_node_ind is None:
+            return None
+
+        self.FindPath(best_node_ind)
+        return self.path
+
+    def get_best_node(self):
+        node_dist = [
+            self.node_dist(node, self.cur_goal) for node in self.nodelist
+            ]
+        pos_node_ind = [node_dist.index(i) for i in node_dist if i <= self.stepsize]
+        if len(pos_node_ind) == 0:
+            return None
+        # find the node with the minimum cost
+        node_cost = [self.nodelist[i].cost for i in pos_node_ind]
+        min_cost = min(node_cost)
+        min_cost_ind = node_cost.index(min_cost)
+        return pos_node_ind[min_cost_ind]
 
     def grow_tree(self):
         """
@@ -73,17 +99,13 @@ class fRRT():
             self.nodelist.append(node_new)
             # rewire neighbors
             self.rewire(node_new, near_ind)
-            #self.DrawTree()
-            # check if reach the goal
-            if self.node_dist(node_new, self.cur_goal) < self.stepsize:
-                print('step is :', step)
-                print("Reach the goal!")
-                return True
+            # self.DrawTree()
 
-
-        if step == self.maxIter - 1:
-            print("Failed to find the goal!")
-            return False
+    def reset(self):
+        #self.cur_goal = Node(cur_goal[0], cur_goal[1])
+        self.path = [[self.cur_goal.x, self.cur_goal.y]]
+        self.nodelist = []
+        self.path_node = []
 
     def rewire(self, node_new, near_ind):
         """
@@ -105,17 +127,17 @@ class fRRT():
                     node.parent = new_node_ind
                     node.cost = new_cost
 
-    def FindPath(self):
+    def FindPath(self, index):
         """
         Find path from the current goal to start node
         :return: self.path
         """
-        index = len(self.nodelist) - 1
         while index is not None:
             node = self.nodelist[index]
             self.path_node.append(node)
             self.path.append([node.x, node.y])
             index = node.parent
+        self.path.reverse()
 
     def choose_parent(self, node_new, near_ind):
         """
@@ -158,10 +180,14 @@ class fRRT():
         :return: indices of nodes in the circle
         """
         r = self.stepsize * alpha
-        near_node_list = []
+        near_node_dist = []
         for node in self.nodelist:
-            near_node_list.append(self.node_dist(node_new, node))
-        near_ind = [near_node_list.index(i) for i in near_node_list if (i <= r and i != 0)]
+            if abs(node_new.x - node.x) < 1e-4:
+                # skip node_new itself
+                near_node_dist.append(float("inf"))
+            else:
+                near_node_dist.append(self.node_dist(node_new, node))
+        near_ind = [near_node_dist.index(i) for i in near_node_dist if (i <= r and i != 0)]
         return near_ind
 
     def expand(self, node_rnd, node_index):
@@ -247,24 +273,18 @@ class fRRT():
         Check whether the path from new node to its parents collides with obstacles
         If there is Collision, return True;
         """
-        # calculate gradient and intercept of the edge from parent to child node
-        gradient = (node_new.y - node_parent.y) / (node_new.x - node_parent.x)
-        intercept = (node_new.x * node_parent.y - node_new.y * node_parent.x) / (node_new.x - node_parent.x)
-
-        for (x, y, radius) in self.obstacle:
-            # dist1 is the distance from new node to the center of obstacle
-            dist1 = math.sqrt((x - node_new.x) ** 2 + (y - node_new.y) ** 2)
-            # cross flag and dist2 is used to decide whether the
-            # edge between parent and node_new cross the obstacle
-            cross_flag = ((node_new.x - x) * (node_parent.x - x)) <= 0 or ((node_new.y - y) * (node_parent.y - y)) <= 0
-            # dist2 is the distance from center of obstacle to the edge linking parent and child
-            dist2 = abs(gradient * x - y + intercept) / math.sqrt(gradient ** 2 + 1)
-            if dist1 <= radius:
-                # print('dist is smaller than radius')
-                return True # unsafe
-            elif dist2 <= radius and cross_flag:
-                # print('dist2 is smaller than radius')
-                return True # unsafe
+        division = 10
+        delta_x = (node_new.x - node_parent.x) / division
+        delta_y = (node_new.y - node_parent.y) / division
+        for i in range(division+1):
+            interpolate_x = delta_x * i + node_parent.x
+            interpolate_y = delta_y * i + node_parent.y
+            for (ox, oy, radius) in self.obstacle:
+                dx = ox - interpolate_x
+                dy = oy - interpolate_y
+                d = dx**2 + dy**2
+                if d <= radius**2:
+                    return True
         return False # safe
 
     def DrawTree(self):
@@ -287,21 +307,28 @@ class fRRT():
 
     def DrawPath(self):
         print('begin to draw path!')
-        plt.clf()
-        plt.plot([x for (x,y) in self.path],[y for (x,y) in self.path], "-k")
-        plt.plot([x for (x,y) in self.path],[y for (x,y) in self.path], "yo")
-        for node in self.goal_list:
-            plt.plot(node.x, node.y, 'g*')
+        fig = plt.gcf()
+        #fig = plt.figure(1)
+        fig.clf()
         ax = plt.gca()
         ax.set_xlim((self.min_rand, self.max_rand))
         ax.set_ylim((self.min_rand, self.max_rand))
-        plt.plot(self.start.x, self.start.y, 'ro')
-        plt.plot(self.cur_goal.x, self.cur_goal.y, 'bo')
+        # plot path
+        ax.plot([x for (x,y) in self.path],[y for (x,y) in self.path], "-k")
+        ax.plot([x for (x,y) in self.path],[y for (x,y) in self.path], "yo")
+        # plot goal list
+        for node in self.goal_list:
+            ax.plot(node.x, node.y, 'g*')
+        # plot start and current goal
+        ax.plot(self.start.x, self.start.y, 'ro')
+        ax.plot(self.cur_goal.x, self.cur_goal.y, 'bo')
+        # plot obstacles
         for (x, y, radius) in self.obstacle:
             circle = plt.Circle((x, y), radius, color='y')
             ax.add_artist(circle)
-        plt.show()
-        plt.pause(0.01)
+        plt.draw()
+        plt.pause(0.001)
+        #plt.close(fig)
 
 class Node():
     """
@@ -334,7 +361,7 @@ def main():
     """
     goal_list = [(1, 4), (4,1), (10, 5), (5, 10), (14,2), (2,14), (14, 14)]
     # trans_prob 2d array [from, to]
-    #trans_prob = np.array([[1, 0.9, 0], [0.9, 1, 0.5], [0, 0.5, 1]])
+    # trans_prob = np.array([[1, 0.9, 0], [0.9, 1, 0.5], [0, 0.5, 1]])
     trans_prob = np.ones((len(goal_list), len(goal_list))) * 0.3
     trans_prob[6][0] += 0.5
     trans_prob[6][3] += 0.5
@@ -342,16 +369,29 @@ def main():
     # trans_prob = np.zeros((7,7))
     obstacle = [(8,8,1),(6,6,1),(12,12,1)]
 
-    for i in range(20):
-        frrt = fRRT(start=[0, 0], cur_goal=cur_goal,
+    frrt = fRRT(start=[0, 0], cur_goal=cur_goal,
                     goal_list=goal_list, obstacle=obstacle,
                     TreeArea=[-1, 15], trans_prob=trans_prob)
-        flag = frrt.grow_tree()
-        if flag:
-            frrt.FindPath()
-            frrt.DrawPath()
-            frrt.DrawTree()
+    #for i in range(20):
+    path = frrt.planning()
+    if path is not None:
+        plt.figure(1)
+        frrt.DrawPath()
+        plt.figure(2)
+        frrt.DrawTree()
+    else:
+        print("Can't find the path")
 
+    # calculate path distance
+    dist = 0
+    prev = frrt.path[0]
+    for point in frrt.path:
+        dist += math.sqrt((point[0] - prev[0])**2 +
+                            (point[1] - prev[1])**2)
+        prev = point
+    print("path distance is:", dist)
+    # frrt.DrawTree()
+    #frrt.reset()
     # frrt.DrawTree()
 
 if __name__ == '__main__':
