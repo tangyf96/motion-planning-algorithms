@@ -26,7 +26,7 @@ class RRT():
                  randArea=[],
                  expandDis=0.5,
                  goalSampleRate=20,
-                 maxIter=1000):
+                 maxIter=400):
         """
         Setting Parameter
 

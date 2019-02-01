@@ -16,7 +16,7 @@ class fRRT():
     """
     Class for flexible RRT planning
     """
-    def __init__(self, start, cur_goal, goal_list = [], obstacle = [], TreeArea = [], trans_prob = [], stepsize = 0.5, SampleRate = 2, maxIter = 1000):
+    def __init__(self, start, cur_goal, goal_list = [], obstacle = [], TreeArea = [], trans_prob = [], stepsize = 0.5, SampleRate = 2, maxIter = 400):
         """
        This is the initialization for class RRT
        Parameters:
