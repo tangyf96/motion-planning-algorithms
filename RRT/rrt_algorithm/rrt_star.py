@@ -259,13 +259,13 @@ def main():
     # ====Search Path with RRT====
     #obstacleList = [(5, 5, 1), (3, 6, 2), (3, 8, 2), (3, 10, 2), (7, 5, 2),
     #                (9, 5, 2)]  # [x,y,size(radius)]
-    obstacleList = [(8,8,1),(6,6,1),(12,12,1)]
+    obstacle = [(8, 8, 1), (6, 6, 1), (12, 12, 1)]
     # Set Initial parameters
     rrt = RRT(
         start=[0, 0],
         goal=[14, 14],
         randArea=[-1, 15],
-        obstacleList=obstacleList)
+        obstacleList=obstacle)
     path = rrt.planning()
 
     # calculate path distance

@@ -83,10 +83,10 @@ class fRRT():
             node_rnd = self.get_random_point()
 
             # find nearest node
-            node_best_index = self.FindNearestNode(Node(node_rnd[0], node_rnd[1]))
+            node_nearest_index = self.FindNearestNode(Node(node_rnd[0], node_rnd[1]))
 
             # expand tree
-            node_new = self.expand(node_rnd, node_best_index)
+            node_new = self.expand(node_rnd, node_nearest_index)
 
             # collision check
             if self.collision_check(node_new, self.nodelist[node_new.parent]):
@@ -95,6 +95,9 @@ class fRRT():
             near_ind = self.find_near_nodes(node_new)
             # choose parent for new node with the minimum cost
             node_new = self.choose_parent(node_new, near_ind)
+            # if can't choose possible parent
+            if node_new.parent == None:
+                continue
             # add to nodelist
             self.nodelist.append(node_new)
             # rewire neighbors
@@ -114,7 +117,7 @@ class fRRT():
         """
         new_node_ind = len(self.nodelist) - 1
 
-        for ind in range(len(near_ind)):
+        for ind in near_ind:
             node = self.nodelist[ind]
             dist = self.node_dist(node_new, node)
             new_cost = node_new.cost + dist + self.tran_weight * self.trans_cost(node)
@@ -126,6 +129,7 @@ class fRRT():
                     # no collision
                     node.parent = new_node_ind
                     node.cost = new_cost
+                    # print(self.nodelist[ind].cost)
 
     def FindPath(self, index):
         """
@@ -177,7 +181,7 @@ class fRRT():
     def find_near_nodes(self, node_new, alpha=5.0):
         """
         Find the nodes in the circle around new node
-        :return: indices of nodes in the circle
+        :return: indices of nodes in the area
         """
         r = self.stepsize * alpha
         near_node_dist = []
@@ -217,23 +221,30 @@ class fRRT():
         :return: transition probability cost
         """
         cost = 0
+        for ind, node in enumerate(self.goal_list):
+            if self.cur_goal == node:
+                # print("check")
+                from_goal_ind = ind
+                break
+        """
         for ind in range(len(self.goal_list)):
             if self.goal_list[ind].x == self.cur_goal.x and self.goal_list[ind].y == self.cur_goal.y:
                 from_goal_ind = ind
                 break
-
-        for ind in range(len(self.trans_prob)):
-            if ind == from_goal_ind:
-                continue
-            goal_change_prob = self.trans_prob[from_goal_ind][ind]
-            dist = self.node_dist(node_new, self.goal_list[ind])
-            cost += dist * goal_change_prob
+        """
+        #cur_goal = self.goal_list[from_goal_ind]
+        dist = np.array([self.node_dist(node_new, goal) for goal in self.goal_list])
+        dist[from_goal_ind] = 0
+        goal_change_prob = self.trans_prob[from_goal_ind]
+        cost = np.sum(dist * goal_change_prob)
 
         return cost
 
     def node_dist(self, node_new, goal):
         """
         Calculte the distance to possible goal
+        Input : node_new is a Node object
+                goal is also a Node object
         """
         dist = np.linalg.norm([goal.x - node_new.x, goal.y - node_new.y])
         return dist
@@ -242,14 +253,10 @@ class fRRT():
         """
         Use Euclidean Distance to find the nearest node
         """
-        """
+
         dist = [self.node_dist(node_rnd, node) for node in self.nodelist]
-        min_dist = min(dist)
-        node_index = dist.index(min_dist)
-        # print(node_index)
-        return node_index
+        nearest_ind = dist.index(min(dist))
         """
-        dist = [self.node_dist(node_rnd, node) for node in self.nodelist]
         dist_copy = copy.deepcopy(dist)
         dist_copy.sort()
         possible_dist = dist_copy[:2]
@@ -258,7 +265,8 @@ class fRRT():
             ind_list.append(dist.index(possible_dist[i]))
         cost_list = [self.nodelist[ind].cost for ind in ind_list]
         ind = ind_list[cost_list.index(min(cost_list))]
-        return ind
+        """
+        return nearest_ind
 
     def get_random_point(self):
         if random.randint(0,10) > self.SampleRate:
@@ -284,7 +292,7 @@ class fRRT():
                 dy = oy - interpolate_y
                 d = dx**2 + dy**2
                 if d <= radius**2:
-                    return True
+                    return True # collision
         return False # safe
 
     def DrawTree(self):
@@ -342,6 +350,9 @@ class Node():
         self.cost = 0
         self.parent = None
 
+    def __eq__(self, other):
+        return (self.x == other.x) and (self.y == other.y)
+
 def main():
     print("Start flexible rrt planning")
 
@@ -362,10 +373,13 @@ def main():
     goal_list = [(1, 4), (4,1), (10, 5), (5, 10), (14,2), (2,14), (14, 14)]
     # trans_prob 2d array [from, to]
     # trans_prob = np.array([[1, 0.9, 0], [0.9, 1, 0.5], [0, 0.5, 1]])
-    trans_prob = np.ones((len(goal_list), len(goal_list))) * 0.3
-    trans_prob[6][0] += 0.5
-    trans_prob[6][3] += 0.5
-    trans_prob[6][5] += 0.5
+    trans_prob = np.array([[0.2, 0, 0.2, 0.1, 0.2, 0.1, 0.2],
+                           [0.1, 0.2, 0, 0.2, 0.1, 0.2, 0.2],
+                           [0.2, 0.1, 0.2, 0.1, 0.2, 0, 0.2],
+                           [0.1, 0.2, 0, 0.2, 0.1, 0.2, 0.2],
+                           [0.2, 0.1, 0.2, 0, 0.2, 0.1, 0.2],
+                           [0.1, 0.2, 0.1, 0.2, 0, 0.2, 0.2],
+                           [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.4]])
     # trans_prob = np.zeros((7,7))
     obstacle = [(8,8,1),(6,6,1),(12,12,1)]
 

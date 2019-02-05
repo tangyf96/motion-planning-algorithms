@@ -207,7 +207,7 @@ def main():
     cur_goal = [14, 14]
     goal_list = [[1, 4], [4, 1], [5, 10], [10, 5], [2, 14], [14, 2], [14, 14]]
 
-    simu_time = 500
+    simu_time = 300
     # trans_prob 2d array [from, to]
     human_goal_model = np.array([[1, -1, 1, 0, 1, 0,
                                   1], [0, 1, -1, 1, 0, 1, 1],
