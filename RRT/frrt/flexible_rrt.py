@@ -39,7 +39,7 @@ class fRRT():
         self.nodelist = []
         self.trans_prob = trans_prob
         self.goal_list = []
-        self.tran_weight = 2
+        self.tran_weight = 30
         self.path_node = []
         for (x, y) in goal_list:
             self.goal_list.append(Node(x, y))
@@ -96,7 +96,7 @@ class fRRT():
             # choose parent for new node with the minimum cost
             node_new = self.choose_parent(node_new, near_ind)
             # if can't choose possible parent
-            if node_new.parent == None:
+            if node_new.parent is None:
                 continue
             # add to nodelist
             self.nodelist.append(node_new)
@@ -210,7 +210,8 @@ class fRRT():
         node_new.y += self.stepsize * math.sin(theta)
 
         node_new.parent = node_index
-
+        # reset the cost
+        node_new.cost = 0
         # don't update the cost here
         # update the cost when chosing parent
         return node_new
@@ -367,6 +368,7 @@ def main():
 
     # initialize
     cur_goal = [14, 14]
+
     """
     goal_list = [(5,10), (1,4), (10,2)]
     """
@@ -383,7 +385,7 @@ def main():
     # trans_prob = np.zeros((7,7))
     obstacle = [(8,8,1),(6,6,1),(12,12,1)]
 
-    frrt = fRRT(start=[0, 0], cur_goal=cur_goal,
+    frrt = fRRT(start=[1,4], cur_goal=cur_goal,
                     goal_list=goal_list, obstacle=obstacle,
                     TreeArea=[-1, 15], trans_prob=trans_prob)
     #for i in range(20):

@@ -157,13 +157,20 @@ class Robot:
                     # add the path distance if the path is supposed to 
                     # biased towards new goal
                     if self.human_model[cur_goal_ind][new_goal_ind] == 1:
-                        self.path_distance.append(self.path_dist())
+                        self.path_distance.append(np.linalg.norm([self.start[0]-self.cur_goal[0], self.start[1]-self.cur_goal[1]]))
             else:
                 if operator.ne(self.cur_loc, self.cur_goal):
                     # move to next location
-                    next_loc_ind = self.move(self.cur_loc, next_loc_ind)
                     if next_loc_ind == len(self.planner.path):
                         print("the robot reaches the goal!", self.cur_goal)
+                        continue
+                    try:
+                        next_loc_ind = self.move(self.cur_loc, next_loc_ind)
+                    except IndexError:
+                        print("Index Error line 170!")
+
+                    # if next_loc_ind == len(self.planner.path):
+                    #   print("the robot reaches the goal!", self.cur_goal)
                     # self.draw_path(path)
                 else:
                     print("the robot has reached the goal!", self.cur_goal)
@@ -241,8 +248,7 @@ def main():
         planner=frrt,
         human_model=human_goal_model)
 
-    robot1.work(simu_time)
-    ave_path_dist1 = sum(robot1.path_distance) / len(robot1.path_distance)
+
 
     # rrt star
 
@@ -257,8 +263,23 @@ def main():
         trans_prob=trans_prob,
         planner=rrt_star_planner,
         human_model=human_goal_model)
-    robot2.work(simu_time)
-    ave_path_dist2 = sum(robot2.path_distance) / len(robot2.path_distance)
+
+    ave_path_dist1 = []
+    ave_path_dist2 = []
+
+    num_simu = 10
+    for i in range(num_simu):
+        robot1.work(simu_time)
+        ave_path_dist1.append(sum(robot1.path_distance) / len(robot1.path_distance))
+        robot2.work(simu_time)
+        ave_path_dist2.append(sum(robot2.path_distance) / len(robot2.path_distance))
+        robot1.planner.reset()
+        robot2.planner.reset()
+
+
+    # robot1.work(simu_time)
+    # ave_path_dist1 = ave_path_dist1/num_simu
+    # ave_path_dist2 = ave_path_dist2/num_simu
     print("average path distance for fRRT:", ave_path_dist1)
     print("average path distance for rrt star:", ave_path_dist2)
 

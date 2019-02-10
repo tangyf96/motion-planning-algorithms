@@ -216,7 +216,9 @@ class RRT():
 
         plt.plot(self.start.x, self.start.y, "xr")
         plt.plot(self.cur_goal.x, self.cur_goal.y, "xr")
+        plt.plot([x for (x, y) in self.path], [y for (x, y) in self.path], '-r')
         plt.axis([-2, 15, -2, 15])
+
         plt.grid(True)
         plt.pause(0.01)
 
@@ -262,8 +264,8 @@ def main():
     obstacle = [(8, 8, 1), (6, 6, 1), (12, 12, 1)]
     # Set Initial parameters
     rrt = RRT(
-        start=[0, 0],
-        goal=[14, 14],
+        start=[4.628168491031819, 5.228134513254739],
+        goal=[2, 14],
         randArea=[-1, 15],
         obstacleList=obstacle)
     path = rrt.planning()
@@ -280,9 +282,8 @@ def main():
     # Draw final path
     if show_animation:
         rrt.DrawGraph()
-        plt.plot([x for (x, y) in path], [y for (x, y) in path], '-r')
-        plt.grid(True)
-        plt.pause(0.01)  # Need for Mac
+        #plt.grid(True)
+        #plt.pause(0.01)  # Need for Mac
         plt.show()
 
 
