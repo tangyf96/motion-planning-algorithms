@@ -153,7 +153,7 @@ class Robot:
                 next_loc_ind = 1
                 # draw the new path
                 if path:
-                    # self.draw_path(path)
+                    self.draw_path(path)
                     # add the path distance if the path is supposed to 
                     # biased towards new goal
                     if self.human_model[cur_goal_ind][new_goal_ind] == 1:
@@ -171,7 +171,7 @@ class Robot:
 
                     # if next_loc_ind == len(self.planner.path):
                     #   print("the robot reaches the goal!", self.cur_goal)
-                    # self.draw_path(path)
+                    self.draw_path(path)
                 else:
                     print("the robot has reached the goal!", self.cur_goal)
             work_time -= 1

@@ -39,7 +39,8 @@ class fRRT():
         self.nodelist = []
         self.trans_prob = trans_prob
         self.goal_list = []
-        self.tran_weight = 30
+        #self.trans_weight = 20
+        self.tran_weight = 1
         self.path_node = []
         for (x, y) in goal_list:
             self.goal_list.append(Node(x, y))
@@ -76,9 +77,13 @@ class fRRT():
         flexible RRT Path planning
         :return: self.nodelist
         """
-        self.start.cost = self.tran_weight * self.trans_cost(self.start)
+        temp = self.trans_cost(self.start)
+        self.start.cost = self.tran_weight * temp
         self.nodelist.append(self.start)
         for step in range(self.maxIter):
+            if step % 100 == 0:
+                print('debug')
+                
             # generate random point
             node_rnd = self.get_random_point()
 
@@ -227,12 +232,7 @@ class fRRT():
                 # print("check")
                 from_goal_ind = ind
                 break
-        """
-        for ind in range(len(self.goal_list)):
-            if self.goal_list[ind].x == self.cur_goal.x and self.goal_list[ind].y == self.cur_goal.y:
-                from_goal_ind = ind
-                break
-        """
+
         #cur_goal = self.goal_list[from_goal_ind]
         dist = np.array([self.node_dist(node_new, goal) for goal in self.goal_list])
         dist[from_goal_ind] = 0
@@ -385,7 +385,7 @@ def main():
     # trans_prob = np.zeros((7,7))
     obstacle = [(8,8,1),(6,6,1),(12,12,1)]
 
-    frrt = fRRT(start=[1,4], cur_goal=cur_goal,
+    frrt = fRRT(start=[0,0], cur_goal=cur_goal,
                     goal_list=goal_list, obstacle=obstacle,
                     TreeArea=[-1, 15], trans_prob=trans_prob)
     #for i in range(20):
