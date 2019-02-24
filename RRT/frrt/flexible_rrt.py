@@ -16,7 +16,7 @@ class fRRT():
     """
     Class for flexible RRT planning
     """
-    def __init__(self, start, cur_goal, goal_list = [], obstacle = [], TreeArea = [], trans_prob = [], stepsize = 0.5, SampleRate = 2, maxIter = 400):
+    def __init__(self, start, cur_goal, goal_list = [], obstacle = [], TreeArea = [], trans_prob = [], stepsize = 0.5, SampleRate = 2, maxIter = 800):
         """
        This is the initialization for class RRT
        Parameters:
@@ -39,7 +39,7 @@ class fRRT():
         self.nodelist = []
         self.trans_prob = trans_prob
         self.goal_list = []
-        self.tran_weight = 30
+        self.tran_weight = 1
         self.path_node = []
         for (x, y) in goal_list:
             self.goal_list.append(Node(x, y))
@@ -120,7 +120,8 @@ class fRRT():
         for ind in near_ind:
             node = self.nodelist[ind]
             dist = self.node_dist(node_new, node)
-            new_cost = node_new.cost + dist + self.tran_weight * self.trans_cost(node)
+            #new_cost = node_new.cost + dist + self.tran_weight * self.trans_cost(node)
+            new_cost = node_new.cost + self.tran_weight * self.trans_cost(node)
             if new_cost < node.cost:
                 if self.collision_check(node, node_new):
                     # collision
@@ -174,7 +175,8 @@ class fRRT():
         else:
             node_new.parent = min_cost_ind
             # change cost, consider transition probability cost
-            node_new.cost = min_cost + self.tran_weight * self.trans_cost(node_new)
+            #node_new.cost = min_cost + self.tran_weight * self.trans_cost(node_new)
+            node_new.cost = self.tran_weight * self.trans_cost(node_new)
 
         return node_new
 
@@ -227,12 +229,7 @@ class fRRT():
                 # print("check")
                 from_goal_ind = ind
                 break
-        """
-        for ind in range(len(self.goal_list)):
-            if self.goal_list[ind].x == self.cur_goal.x and self.goal_list[ind].y == self.cur_goal.y:
-                from_goal_ind = ind
-                break
-        """
+
         #cur_goal = self.goal_list[from_goal_ind]
         dist = np.array([self.node_dist(node_new, goal) for goal in self.goal_list])
         dist[from_goal_ind] = 0
@@ -254,19 +251,8 @@ class fRRT():
         """
         Use Euclidean Distance to find the nearest node
         """
-
         dist = [self.node_dist(node_rnd, node) for node in self.nodelist]
         nearest_ind = dist.index(min(dist))
-        """
-        dist_copy = copy.deepcopy(dist)
-        dist_copy.sort()
-        possible_dist = dist_copy[:2]
-        ind_list = []
-        for i in range(len(possible_dist)):
-            ind_list.append(dist.index(possible_dist[i]))
-        cost_list = [self.nodelist[ind].cost for ind in ind_list]
-        ind = ind_list[cost_list.index(min(cost_list))]
-        """
         return nearest_ind
 
     def get_random_point(self):
@@ -385,16 +371,16 @@ def main():
     # trans_prob = np.zeros((7,7))
     obstacle = [(8,8,1),(6,6,1),(12,12,1)]
 
-    frrt = fRRT(start=[1,4], cur_goal=cur_goal,
+    frrt = fRRT(start=[0,0], cur_goal=cur_goal,
                     goal_list=goal_list, obstacle=obstacle,
                     TreeArea=[-1, 15], trans_prob=trans_prob)
     #for i in range(20):
     path = frrt.planning()
     if path is not None:
         plt.figure(1)
-        frrt.DrawPath()
+        #frrt.DrawPath()
         plt.figure(2)
-        frrt.DrawTree()
+        #frrt.DrawTree()
     else:
         print("Can't find the path")
 
