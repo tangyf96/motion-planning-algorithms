@@ -34,7 +34,6 @@ class Robot:
         self.planner = planner
         self.trans_prob = trans_prob
         self.speed = 1.0
-        self.path_distance = []
         self.human_model = human_model
 
     def move(self, start_loc, next_loc_ind):
@@ -79,24 +78,6 @@ class Robot:
                 ]
                 return next_loc_ind + 1
 
-    def change_goal(self):
-        """
-        Change the goal of the robot
-        :param change_prob: the probability of goal changing
-        :return: new goal's location 
-        """
-        change_prob = 0.3
-        self.goal_list.index(self.cur_goal)
-        if np.random.random() < change_prob:
-            # change goal
-            cur_goal_ind = self.goal_list.index(self.cur_goal)
-            new_goal_ind = np.random.choice(
-                len(self.goal_list), 1, p=self.trans_prob[cur_goal_ind])[0]
-            new_goal = self.goal_list[new_goal_ind]
-            return new_goal
-        else:
-            return self.cur_goal
-
     def path_dist(self):
         """
         Calculate the length of path
@@ -121,62 +102,119 @@ class Robot:
             print("Can't find the path")
             return None
 
-    def work(self, work_time):
+class Human():
+    def __init__(self, speed, goal_list, cur_goal, cur_loc, trans_prob):
         """
-        Simulation
-        :param work_time: the working time step for the robot 
+        Input: 
+            speed : the movement speed of human
+            trans_prob : the human transition model 
+            cur_loc : human's current location
         """
-        path = self.find_path()
-        while path is None:
-            path = self.find_path()
-        next_loc_ind = 1
-        while work_time != 0:
-            # change to new goal
-            self.new_goal = self.change_goal()
-            cur_goal_ind = self.goal_list.index(self.cur_goal)
-            new_goal_ind = self.goal_list.index(self.new_goal)
-            if operator.ne(self.cur_goal, self.new_goal):
-                print("the goal change from", self.cur_goal, "to",
-                      self.new_goal)
+        self.speed = speed
+        self.trans_prob = trans_prob
+        self.cur_loc = cur_loc
+        self.goal = cur_goal
+        self.goal_list = goal_list
 
-                # replan
-                # reset the planner
-                self.planner.start = Node(self.cur_loc[0], self.cur_loc[1])
-                self.planner.cur_goal = Node(self.new_goal[0],
-                                             self.new_goal[1])
-                self.planner.reset()
-                self.cur_goal = self.new_goal
-                self.start = self.cur_loc
+    def move(self):
+        """
+        move the human towards its goal
+        modify self.cur_loc
+        :param cur_loc: [x,y]
+        :param goal: [x,y]
+        """
+        dist = math.sqrt((self.goal[0] - self.cur_loc[0])**2 +
+                         (self.goal[1] - self.cur_loc[1])**2)
+        if dist > self.speed:
+            dx = self.speed * (self.goal[0] - self.cur_loc[0]) / dist
+            dy = self.speed * (self.goal[1] - self.cur_loc[1]) / dist
+            self.cur_loc[0] += dx
+            self.cur_loc[1] += dy
+        else:
+            # in one time step, robot will reach the goal
+            self.cur_loc = self.goal
+    
+    def change_goal(self):
+        """
+        Change the goal of the human
+        :param change_prob: the probability of goal changing
+        :return: new goal's location 
+        """
+        change_prob = 0.3
+        self.goal_list.index(self.goal)
+        if np.random.random() < change_prob:
+            # change goal
+            cur_goal_ind = self.goal_list.index(self.goal)
+            new_goal_ind = np.random.choice(
+                len(self.goal_list), 1, p=self.trans_prob[cur_goal_ind])[0]
+            self.goal = self.goal_list[new_goal_ind]
+            return self.goal
+        else:
+            return self.goal
+
+class Experiment():
+    def __init__(self, robot, human, work_time):
+        self.robot = robot
+        self.human = human
+        self.work_time = work_time
+        self.path_distance = []
+
+    def work(self):
+        """
+        Simulation for work_time time steps
+        """
+        path = self.robot.find_path()
+        while path is None:
+            path = self.robot.find_path()
+        next_loc_ind = 1
+        while self.work_time != 0:
+            # change to new goal
+            self.robot.new_goal = self.human.change_goal()
+            cur_goal_ind = self.robot.goal_list.index(self.robot.cur_goal)
+            new_goal_ind = self.robot.goal_list.index(self.robot.new_goal)
+            # if goal change
+            if operator.ne(self.robot.cur_goal, self.robot.new_goal):
+                print("the goal change from", self.robot.cur_goal, "to",
+                      self.robot.new_goal)
+                # replan and reset the planner
+                self.robot.planner.start = Node(self.robot.cur_loc[0], self.robot.cur_loc[1])
+                self.robot.planner.cur_goal = Node(self.robot.new_goal[0],
+                                             self.robot.new_goal[1])
+                self.robot.planner.reset()
+                self.robot.cur_goal = self.robot.new_goal
+                self.robot.start = self.robot.cur_loc
                 # find the new path
-                while self.find_path() is None:
-                    path = self.find_path()
+                while self.robot.find_path() is None:
+                    path = self.robot.find_path()
                 next_loc_ind = 1
                 # draw the new path
                 if path:
-                    #self.draw_path(path)
-                    # add the path distance if the path is supposed to 
-                    # biased towards new goal
-                    if self.human_model[cur_goal_ind][new_goal_ind] == 1:
-                        self.path_distance.append(np.linalg.norm([self.start[0]-self.cur_goal[0], self.start[1]-self.cur_goal[1]]))
+                    self.draw_path(path)
+                    # Calculate the distance between robot and human
+                    if self.robot.human_model[cur_goal_ind][new_goal_ind] == 1:
+                        # change to be the position between human and robot
+                        self.path_distance.append(np.linalg.norm([self.robot.start[0]-self.human.cur_loc[0],
+                                                                self.robot.start[1]-self.human.goal[1]]))
             else:
-                if operator.ne(self.cur_loc, self.cur_goal):
-                    # move to next location
-                    if next_loc_ind == len(self.planner.path):
-                        print("the robot reaches the goal!", self.cur_goal)
+                # move the robot to next location
+                if operator.ne(self.robot.cur_loc, self.robot.cur_goal):
+                    if next_loc_ind == len(self.robot.planner.path):
+                        print("the robot reaches the goal!", self.robot.cur_goal)
                         continue
                     try:
-                        next_loc_ind = self.move(self.cur_loc, next_loc_ind)
+                        next_loc_ind = self.robot.move(self.robot.cur_loc, next_loc_ind)
                     except IndexError:
-                        print("Index Error line 170!")
-
-                    # if next_loc_ind == len(self.planner.path):
-                    #   print("the robot reaches the goal!", self.cur_goal)
-                    #self.draw_path(path)
+                        print("Index Error line 238!")
+                    self.draw_path(path)
                 else:
-                    print("the robot has reached the goal!", self.cur_goal)
-            work_time -= 1
-            time.sleep(1)
+                    print("the robot has reached the goal!", self.robot.cur_goal)
+                
+                # move the human to next location
+                self.human.move()
 
+            self.work_time -= 1
+            time.sleep(1)
+        
     def draw_path(self, path):
         """
         :param path: list of waypoints location
@@ -185,22 +223,24 @@ class Robot:
         fig = plt.gcf()
         fig.clf()
         ax = plt.gca()
-        ax.set_xlim((self.planner.min_rand, self.planner.max_rand))
-        ax.set_ylim((self.planner.min_rand, self.planner.max_rand))
+        ax.set_xlim((self.robot.planner.min_rand, self.robot.planner.max_rand))
+        ax.set_ylim((self.robot.planner.min_rand, self.robot.planner.max_rand))
         # plot path
-        ax.plot([x for (x, y) in self.planner.path],
-                [y for (x, y) in self.planner.path], "-k")
-        ax.plot([x for (x, y) in self.planner.path],
-                [y for (x, y) in self.planner.path], "yo")
+        ax.plot([x for (x, y) in self.robot.planner.path],
+                [y for (x, y) in self.robot.planner.path], "-k")
+        ax.plot([x for (x, y) in self.robot.planner.path],
+                [y for (x, y) in self.robot.planner.path], "yo")
         # plot goal list
-        ax.plot([x for (x, y) in self.goal_list],
-                [y for (x, y) in self.goal_list], 'g*')
-        # plot current start and goal
-        ax.plot(self.planner.start.x, self.planner.start.y, 'ro')
-        ax.plot(self.cur_goal[0], self.cur_goal[1], 'bo')
-        ax.plot(self.cur_loc[0], self.cur_loc[1], 'r*')
+        ax.plot([x for (x, y) in self.robot.goal_list],
+                [y for (x, y) in self.robot.goal_list], 'g*')
+        # plot current start and goal, robot position
+        ax.plot(self.robot.planner.start.x, self.robot.planner.start.y, 'ro')
+        ax.plot(self.robot.cur_goal[0], self.robot.cur_goal[1], 'bo')
+        ax.plot(self.robot.cur_loc[0], self.robot.cur_loc[1], 'r*')
+        # plot human position
+        ax.plot(self.human.cur_loc[0], self.human.cur_loc[1], 'b*')
         # plot obstacles
-        for (x, y, radius) in self.planner.obstacle:
+        for (x, y, radius) in self.robot.planner.obstacle:
             circle = plt.Circle((x, y), radius, color='y')
             ax.add_artist(circle)
         plt.draw()
@@ -248,8 +288,6 @@ def main():
         planner=frrt,
         human_model=human_goal_model)
 
-
-
     # rrt star
 
     rrt_star_planner = rrt_star(
@@ -257,6 +295,7 @@ def main():
         goal=cur_goal, 
         obstacleList=obstacle, 
         randArea=[-1, 15])
+
     robot2 = Robot(
         start=[0, 0],
         goal_list=goal_list,
@@ -264,17 +303,24 @@ def main():
         planner=rrt_star_planner,
         human_model=human_goal_model)
 
+    human1 = Human(
+        speed=1.5, 
+        goal_list=goal_list,
+        cur_goal=cur_goal, 
+        cur_loc=[5,5],
+        trans_prob = trans_prob)
+    
+    exp1 = Experiment(robot=robot1, human=human1, work_time=simu_time)
+    exp2 = Experiment(robot=robot2, human = human1, work_time=simu_time)
     ave_path_dist1 = []
     ave_path_dist2 = []
 
-    num_simu = 2
-    for i in range(num_simu):
-        robot1.work(simu_time)
-        ave_path_dist1.append(sum(robot1.path_distance) / len(robot1.path_distance))
-        robot2.work(simu_time)
-        ave_path_dist2.append(sum(robot2.path_distance) / len(robot2.path_distance))
-        robot1.planner.reset()
-        robot2.planner.reset()
+    num_simu = 1
+    exp1.work()
+    ave_path_dist1.append(sum(exp1.path_distance) / len(exp1.path_distance))
+    exp2.work(simu_time)
+    ave_path_dist2.append(sum(exp2.path_distance) / len(exp2.path_distance))
+
 
 
     # robot1.work(simu_time)
