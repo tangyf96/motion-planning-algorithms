@@ -37,7 +37,7 @@ class fRRT():
         self.maxIter = maxIter
         self.path = [[self.cur_goal.x, self.cur_goal.y]]
         self.nodelist = []
-        self.trans_prob = trans_prob
+        self.trans_prob = copy.deepcopy(trans_prob)
         self.goal_list = []
         self.tran_weight = 1
         self.path_node = []

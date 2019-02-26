@@ -26,11 +26,11 @@ class Robot:
         :param goal_list: the possible goal of the robot
         :param planner: RRT planner to generate plan
         """
-        self.start = start
-        self.cur_loc = start
+        self.start = copy.deepcopy(start)
+        self.cur_loc = copy.deepcopy(start)
         self.cur_goal = [planner.cur_goal.x, planner.cur_goal.y]
-        self.new_goal = self.cur_goal
-        self.goal_list = goal_list
+        self.new_goal = [planner.cur_goal.x, planner.cur_goal.y]
+        self.goal_list = copy.deepcopy(goal_list)
         self.planner = planner
         self.trans_prob = trans_prob
         self.speed = 1.0
@@ -119,24 +119,25 @@ class Human():
         self.speed = speed
         self.trans_prob = trans_prob
         self.cur_loc = copy.deepcopy(cur_loc)
-        self.goal = cur_goal
+        self.goal = copy.deepcopy(cur_goal)
         self.goal_list_ = copy.deepcopy(goal_list)
 
-    def move(self):
+    def move(self, start_loc):
         """
         move the human towards its goal and modify self.cur_loc
         """
         dist = math.sqrt((self.goal[0] - self.cur_loc[0])**2 +
                          (self.goal[1] - self.cur_loc[1])**2)
+        
         if dist > self.speed:
             dx = self.speed * (self.goal[0] - self.cur_loc[0]) / dist
             dy = self.speed * (self.goal[1] - self.cur_loc[1]) / dist
             # problem here
-            self.cur_loc[0] += dx
-            self.cur_loc[1] += dy
+            final_loc = [start_loc[0] + dx, start_loc[1] + dy]
         else:
             # in one time step, human will reach the goal
-            self.cur_loc = self.goal
+            final_loc = start_loc
+        return final_loc
     
     def change_goal(self):
         """
@@ -218,7 +219,7 @@ class Experiment():
                     print("the robot has reached the goal!", self.robot.cur_goal)
                 
                 # move the human to next location
-                self.human.move()
+                self.human.cur_loc = self.human.move(self.human.cur_loc)
                 self.draw_path(path)
 
             self.work_time -= 1
@@ -280,6 +281,7 @@ def main():
                            [0.2, 0.1, 0.2, 0, 0.2, 0.1, 0.2],
                            [0.1, 0.2, 0.1, 0.2, 0, 0.2, 0.2],
                            [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.4]])
+                           
     obstacle = [(8, 8, 1), (6, 6, 1), (12, 12, 1)]
     # flexible RRT
     frrt = fRRT(
@@ -329,8 +331,6 @@ def main():
     ave_path_dist1.append(sum(exp1.path_distance) / len(exp1.path_distance))
     exp2.work()
     ave_path_dist2.append(sum(exp2.path_distance) / len(exp2.path_distance))
-
-
 
     # robot1.work(simu_time)
     # ave_path_dist1 = ave_path_dist1/num_simu
