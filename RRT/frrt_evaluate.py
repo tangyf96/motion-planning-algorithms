@@ -267,7 +267,7 @@ def main():
     ave_path_dist1 = []
     ave_path_dist2 = []
 
-    num_simu = 3
+    num_simu = 1
     for i in range(num_simu):
         robot1.work(simu_time)
         ave_path_dist1.append(sum(robot1.path_distance) / len(robot1.path_distance))
