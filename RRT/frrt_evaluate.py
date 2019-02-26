@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#-*- coding: utf-8 -*-
 """
 This is the evaluation for flexible RRT star and traditional RRT star
 @author: Yifan Tang
@@ -66,6 +66,7 @@ class Robot:
                 dist = math.sqrt((next_loc[0] - start_loc[0])**2 +
                                  (next_loc[1] - start_loc[1])**2)
             if dist > move_left:
+                # doesn't reach the goal in this time step
                 dx = move_left * (next_loc[0] - start_loc[0]) / dist
                 dy = move_left * (next_loc[1] - start_loc[1]) / dist
                 self.cur_loc[0] = start_loc[0] + dx
@@ -103,51 +104,53 @@ class Robot:
             return None
 
 class Human():
+    """
+    Human class to simulate a human working in the environment, following its goal change model.
+    """
     def __init__(self, speed, goal_list, cur_goal, cur_loc, trans_prob):
         """
         Input: 
             speed : the movement speed of human
+            goal_list: the possible goals for human
+            cur_goal: current goal position
+            cur_loc : human's current location            
             trans_prob : the human transition model 
-            cur_loc : human's current location
         """
         self.speed = speed
         self.trans_prob = trans_prob
-        self.cur_loc = cur_loc
+        self.cur_loc = copy.deepcopy(cur_loc)
         self.goal = cur_goal
-        self.goal_list = goal_list
+        self.goal_list_ = copy.deepcopy(goal_list)
 
     def move(self):
         """
-        move the human towards its goal
-        modify self.cur_loc
-        :param cur_loc: [x,y]
-        :param goal: [x,y]
+        move the human towards its goal and modify self.cur_loc
         """
         dist = math.sqrt((self.goal[0] - self.cur_loc[0])**2 +
                          (self.goal[1] - self.cur_loc[1])**2)
         if dist > self.speed:
             dx = self.speed * (self.goal[0] - self.cur_loc[0]) / dist
             dy = self.speed * (self.goal[1] - self.cur_loc[1]) / dist
+            # problem here
             self.cur_loc[0] += dx
             self.cur_loc[1] += dy
         else:
-            # in one time step, robot will reach the goal
+            # in one time step, human will reach the goal
             self.cur_loc = self.goal
     
     def change_goal(self):
         """
         Change the goal of the human
-        :param change_prob: the probability of goal changing
         :return: new goal's location 
         """
         change_prob = 0.3
-        self.goal_list.index(self.goal)
+        self.goal_list_.index(self.goal)
         if np.random.random() < change_prob:
             # change goal
-            cur_goal_ind = self.goal_list.index(self.goal)
-            new_goal_ind = np.random.choice(
-                len(self.goal_list), 1, p=self.trans_prob[cur_goal_ind])[0]
-            self.goal = self.goal_list[new_goal_ind]
+            cur_goal_ind = self.goal_list_.index(self.goal)
+            new_goal_ind = np.random.choice(len(self.goal_list_), 1, p=self.trans_prob[cur_goal_ind])[0]
+            temp = self.goal_list_[new_goal_ind]
+            self.goal = temp
             return self.goal
         else:
             return self.goal
@@ -163,15 +166,20 @@ class Experiment():
         """
         Simulation for work_time time steps
         """
+        # find the initial path
         path = self.robot.find_path()
         while path is None:
             path = self.robot.find_path()
         next_loc_ind = 1
+        # simulation begins
         while self.work_time != 0:
             # change to new goal
             self.robot.new_goal = self.human.change_goal()
             cur_goal_ind = self.robot.goal_list.index(self.robot.cur_goal)
-            new_goal_ind = self.robot.goal_list.index(self.robot.new_goal)
+            try:
+                new_goal_ind = self.robot.goal_list.index(self.robot.new_goal)
+            except Exception as e:
+                print('error')
             # if goal change
             if operator.ne(self.robot.cur_goal, self.robot.new_goal):
                 print("the goal change from", self.robot.cur_goal, "to",
@@ -184,7 +192,8 @@ class Experiment():
                 self.robot.cur_goal = self.robot.new_goal
                 self.robot.start = self.robot.cur_loc
                 # find the new path
-                while self.robot.find_path() is None:
+                path = self.robot.find_path()
+                while path is None:
                     path = self.robot.find_path()
                 next_loc_ind = 1
                 # draw the new path
@@ -194,7 +203,7 @@ class Experiment():
                     if self.robot.human_model[cur_goal_ind][new_goal_ind] == 1:
                         # change to be the position between human and robot
                         self.path_distance.append(np.linalg.norm([self.robot.start[0]-self.human.cur_loc[0],
-                                                                self.robot.start[1]-self.human.goal[1]]))
+                                                                self.robot.start[1]-self.human.cur_loc[1]]))
             else:
                 # move the robot to next location
                 if operator.ne(self.robot.cur_loc, self.robot.cur_goal):
@@ -205,15 +214,15 @@ class Experiment():
                         next_loc_ind = self.robot.move(self.robot.cur_loc, next_loc_ind)
                     except IndexError:
                         print("Index Error line 238!")
-                    self.draw_path(path)
                 else:
                     print("the robot has reached the goal!", self.robot.cur_goal)
                 
                 # move the human to next location
                 self.human.move()
+                self.draw_path(path)
 
             self.work_time -= 1
-            time.sleep(1)
+            #time.sleep(1)
         
     def draw_path(self, path):
         """
@@ -254,7 +263,7 @@ def main():
     cur_goal = [14, 14]
     goal_list = [[1, 4], [4, 1], [5, 10], [10, 5], [2, 14], [14, 2], [14, 14]]
 
-    simu_time = 300
+    simu_time = 50
     # trans_prob 2d array [from, to]
     human_goal_model = np.array([[1, -1, 1, 0, 1, 0,
                                   1], [0, 1, -1, 1, 0, 1, 1],
@@ -315,10 +324,10 @@ def main():
     ave_path_dist1 = []
     ave_path_dist2 = []
 
-    num_simu = 1
+    # num_simu = 1
     exp1.work()
     ave_path_dist1.append(sum(exp1.path_distance) / len(exp1.path_distance))
-    exp2.work(simu_time)
+    exp2.work()
     ave_path_dist2.append(sum(exp2.path_distance) / len(exp2.path_distance))
 
 

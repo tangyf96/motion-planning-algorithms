@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#-*- coding: utf-8 -*-
 """
 This is the flexible Rapidly-Exploring Random Trees algorithms
 considering the probability of goal change
@@ -234,7 +234,11 @@ class fRRT():
 
         #cur_goal = self.goal_list[from_goal_ind]
         dist = np.array([self.node_dist(node_new, goal) for goal in self.goal_list])
-        dist[from_goal_ind] = 0
+        try:
+            dist[from_goal_ind] = 0
+        except:
+            pass
+        
         goal_change_prob = self.trans_prob[from_goal_ind]
         cost = np.sum(dist * goal_change_prob)
 
