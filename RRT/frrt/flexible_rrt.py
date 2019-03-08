@@ -39,7 +39,7 @@ class fRRT():
         self.nodelist = []
         self.trans_prob = copy.deepcopy(trans_prob)
         self.goal_list = []
-        self.tran_weight = 1
+        self.tran_weight = 20
         self.path_node = []
         for (x, y) in goal_list:
             self.goal_list.append(Node(x, y))
@@ -122,8 +122,8 @@ class fRRT():
         for ind in near_ind:
             node = self.nodelist[ind]
             dist = self.node_dist(node_new, node)
-            #new_cost = node_new.cost + dist + self.tran_weight * self.trans_cost(node)
-            new_cost = node_new.cost + self.tran_weight * self.trans_cost(node)
+            new_cost = node_new.cost + dist + self.tran_weight * self.trans_cost(node)
+            # new_cost = node_new.cost + self.tran_weight * self.trans_cost(node)
             if new_cost < node.cost:
                 if self.collision_check(node, node_new):
                     # collision
@@ -176,9 +176,10 @@ class fRRT():
             return node_new
         else:
             node_new.parent = min_cost_ind
+            dist = self.node_dist(node_new, self.nodelist[node_new.parent])
             # change cost, consider transition probability cost
-            #node_new.cost = min_cost + self.tran_weight * self.trans_cost(node_new)
-            node_new.cost = self.tran_weight * self.trans_cost(node_new)
+            node_new.cost = min_cost + self.tran_weight * self.trans_cost(node_new) + dist
+            # node_new.cost = self.tran_weight * self.trans_cost(node_new)
 
         return node_new
 

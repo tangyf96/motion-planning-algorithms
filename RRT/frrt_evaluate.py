@@ -199,7 +199,7 @@ class Experiment():
                 next_loc_ind = 1
                 # draw the new path
                 if path:
-                    self.draw_path(path)
+                    # self.draw_path(path)
                     # Calculate the distance between robot and human
                     if self.robot.human_model[cur_goal_ind][new_goal_ind] == 1:
                         # change to be the position between human and robot
@@ -220,7 +220,7 @@ class Experiment():
                 
                 # move the human to next location
                 self.human.cur_loc = self.human.move(self.human.cur_loc)
-                self.draw_path(path)
+                # self.draw_path(path)
 
             self.work_time -= 1
             #time.sleep(1)
@@ -264,7 +264,8 @@ def main():
     cur_goal = [14, 14]
     goal_list = [[1, 4], [4, 1], [5, 10], [10, 5], [2, 14], [14, 2], [14, 14]]
 
-    simu_time = 50
+    # simulation time for each experiment
+    simu_time = 100
     # trans_prob 2d array [from, to]
     human_goal_model = np.array([[1, -1, 1, 0, 1, 0,
                                   1], [0, 1, -1, 1, 0, 1, 1],
@@ -283,54 +284,67 @@ def main():
                            [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.4]])
                            
     obstacle = [(8, 8, 1), (6, 6, 1), (12, 12, 1)]
-    # flexible RRT
-    frrt = fRRT(
-        start=[0, 0],
-        cur_goal=cur_goal,
-        goal_list=goal_list,
-        obstacle=obstacle,
-        TreeArea=[-1, 15],
-        trans_prob=trans_prob)
 
-    robot1 = Robot(
-        start=[0, 0],
-        goal_list=goal_list,
-        trans_prob=trans_prob,
-        planner=frrt,
-        human_model=human_goal_model)
-
-    # rrt star
-
-    rrt_star_planner = rrt_star(
-        start=[0, 0], 
-        goal=cur_goal, 
-        obstacleList=obstacle, 
-        randArea=[-1, 15])
-
-    robot2 = Robot(
-        start=[0, 0],
-        goal_list=goal_list,
-        trans_prob=trans_prob,
-        planner=rrt_star_planner,
-        human_model=human_goal_model)
-
-    human1 = Human(
-        speed=1.5, 
-        goal_list=goal_list,
-        cur_goal=cur_goal, 
-        cur_loc=[5,5],
-        trans_prob = trans_prob)
-    
-    exp1 = Experiment(robot=robot1, human=human1, work_time=simu_time)
-    exp2 = Experiment(robot=robot2, human = human1, work_time=simu_time)
     ave_path_dist1 = []
     ave_path_dist2 = []
 
-    # num_simu = 1
-    exp1.work()
-    ave_path_dist1.append(sum(exp1.path_distance) / len(exp1.path_distance))
-    exp2.work()
-    ave_path_dist2.append(sum(exp2.path_distance) / len(exp2.path_distance))
+    # number of experiment
+    num_simu = 5
+    # flexible RRT
+    for i in range(num_simu):
+        frrt = fRRT(
+            start=[0, 0],
+            cur_goal=cur_goal,
+            goal_list=goal_list,
+            obstacle=obstacle,
+            TreeArea=[-1, 15],
+            trans_prob=trans_prob)
+
+        robot1 = Robot(
+            start=[0, 0],
+            goal_list=goal_list,
+            trans_prob=trans_prob,
+            planner=frrt,
+            human_model=human_goal_model)
+
+        human1 = Human(
+            speed=1.5, 
+            goal_list=goal_list,
+            cur_goal=cur_goal, 
+            cur_loc=[5,5],
+            trans_prob = trans_prob)
+
+        exp1 = Experiment(robot=robot1, human=human1, work_time=simu_time)
+        exp1.work()
+        ave_path_dist1.append(sum(exp1.path_distance) / len(exp1.path_distance))
+
+    for i in range(num_simu):
+        # rrt star
+
+        rrt_star_planner = rrt_star(
+            start=[0, 0], 
+            goal=cur_goal, 
+            obstacleList=obstacle, 
+            randArea=[-1, 15])
+
+        robot2 = Robot(
+            start=[0, 0],
+            goal_list=goal_list,
+            trans_prob=trans_prob,
+            planner=rrt_star_planner,
+            human_model=human_goal_model)
+
+        human1 = Human(
+            speed=1.5, 
+            goal_list=goal_list,
+            cur_goal=cur_goal, 
+            cur_loc=[5,5],
+            trans_prob = trans_prob)
+            
+        exp2 = Experiment(robot=robot2, human = human1, work_time=simu_time)
+
+        exp2.work()
+        ave_path_dist2.append(sum(exp2.path_distance) / len(exp2.path_distance))
 
     # robot1.work(simu_time)
     # ave_path_dist1 = ave_path_dist1/num_simu
