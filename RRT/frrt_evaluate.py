@@ -199,10 +199,15 @@ class Experiment():
             if yes, change the goal of the robot, store the previous goal, 
             make a new path to human's current position
             '''
-            # determine if the robot reach the goal
-            # if reach the goal -> reach human ? reach the robot's goal ? 
+            # determine if the robot reach the goal here? 
+
             # if reach human, change human status of help, 
-            if self.human.is_need_help:
+            # human decide to need help or not? 
+            if ~self.human.is_need_help:
+                self.human.is_need_help = self.human.help_client()
+            # main 
+            if self.human.is_need_help and self.robot.is_able_help:
+                # should I limit the time of providing help on each path? 
                 if self.robot.is_on_task:
                     # the robot is still on the last task, rather moving towards human or the making a detour. 
                     # move the robot along its path
@@ -213,13 +218,13 @@ class Experiment():
                         try:
                             next_loc_ind = self.robot.move(self.robot.cur_loc, next_loc_ind)
                         except IndexError:
-                            print("Index Error line 215!")
+                            print("Index Error line 216!")
                     else:
                         # robot reach the goal
-                        print("the robot has reached the goal!", self.robot.cur_goal)
                         # decide whether the goal is human or the detour station
                         if operator.eq(self.robot.cur_goal, self.human.cur_loc):
                             # the goal is human
+                            print("the robot has reached the human position to catch packages!", self.robot.cur_goal)
                             # reset the planner to the position that human wants
                             new_goal = self.human.generate_goal_pos()
                             self.reset_planner(new_goal)
@@ -233,6 +238,13 @@ class Experiment():
                                 self.draw_path(path)
                                 # Add the measurement function here
                         else:
+                            # the robot finishs the detour
+                            print("the robot finish the detour task at", self.robot.cur_goal)
+                            # set the status of the robot and human
+                            self.robot.is_on_task = False
+                            self.human.is_need_help = False
+                            # the robot is not able to help until it reaches its original goal
+                            self.robot.is_able_help = False
                             # reset the planner to produce path to previous goal
                             self.reset_planner(self.robot.prev_goal)
 
@@ -249,16 +261,9 @@ class Experiment():
                     # the robot is not on the task
                     # it is possible that the robot can help if human is on its way. 
                     # determine if human is on the robot's way, whether the robot wants to help
-                    vec_robot_to_goal = np.array([self.robot.cur_goal[0] - self.robot.cur_loc[0], self.robot.cur_goal[1] - self.robot.cur_loc[1]])
-                    vec_robot_to_human = np.array([self.robot.cur_loc[0] - self.human.cur_loc[0], self.robot.cur_loc[1] - self.human.cur_loc[1]])
-                    cos_theta = np.dot(vec_robot_to_goal, vec_robot_to_human) / (np.linalg.norm(vec_robot_to_goal) * np.linalg.norm(vec_robot_to_human))
-                    if cos_theta <= 0:
-                        # if the robot has passed human, refused to help
-                        self.robot.is_able_help = False
-                    else:
-                        self.robot.is_able_help = True
+                    is_help = self.robot_decide_help()
                     # 
-                    if self.robot.is_able_help:
+                    if is_help:
                         # help the human
                         # change the goal of the robot and make a detour
                         # also store the robot's current goal
@@ -291,6 +296,8 @@ class Experiment():
                             print("the robot has reached the goal!", self.robot.cur_goal)
                             # return the goal and start position to start a new round 
                             self.reset_planner(self.robot.fix_start)
+                            self.robot.fix_start = self.robot.cur_loc
+                            self.robot.is_able_help = True
                             # generate new path
                             path = self.robot.find_path()
                             while path is None:
@@ -301,7 +308,7 @@ class Experiment():
                                 self.draw_path(path)
                                 # Add the measurement function here
             else:
-                # the human don't need help
+                # the human don't need help or the robot has helped the human on this way
                 # the robot should be on its original path or on the detour path to its goal. 
                 if operator.ne(self.robot.cur_loc, self.robot.cur_goal):
                     if next_loc_ind == len(self.robot.planner.path):
@@ -312,7 +319,21 @@ class Experiment():
                     except IndexError:
                         print("Index Error line 249!")
                 else:
+                    # robot reaches its own goal and need to decide for the next step
                     print("the robot has reached the goal!", self.robot.cur_goal)
+                    # return the goal and start position to start a new round 
+                    self.reset_planner(self.robot.fix_start)
+                    self.robot.fix_start = self.robot.cur_loc
+                    self.robot.is_able_help = True
+                    # generate new path
+                    path = self.robot.find_path()
+                    while path is None:
+                        path = self.robot.find_path()
+                    next_loc_ind = 1
+                    # draw the new path
+                    if path:
+                        self.draw_path(path)
+                        # Add the measurement function here
 
             self.work_time -= 1
             #time.sleep(1)
@@ -328,6 +349,26 @@ class Experiment():
         self.robot.cur_goal = self.robot.planner.cur_goal
         self.robot.start = self.robot.cur_loc
 
+    def robot_decide_help(self):
+        '''
+        The robot decides whether to help the human or not based on relationship between human's position and robot's goal position. 
+        If helping human is on its way, the robot will help. Otherwise, it refuses to help. 
+        This prevent the situation that the robot needs to turn back to help human, which decreases the efficiency of the whole system. 
+        This function can also be changed to other function which measures the whole reward of helping people. 
+        '''
+        vec_robot_to_goal = np.array([self.robot.cur_goal[0] - self.robot.cur_loc[0], self.robot.cur_goal[1] - self.robot.cur_loc[1]])
+        vec_robot_to_goal /= np.linalg.norm(vec_robot_to_goal)
+
+        vec_robot_to_human = np.array([self.robot.cur_loc[0] - self.human.cur_loc[0], self.robot.cur_loc[1] - self.human.cur_loc[1]])
+        vec_robot_to_human /= np.linalg.norm(vec_robot_to_human)
+
+        cos_theta = np.dot(vec_robot_to_goal, vec_robot_to_human)
+
+        if cos_theta <= 0:
+            # if the robot has passed human, refused to help
+            return False
+        else:
+            return True
 
     def draw_path(self, path):
         """
