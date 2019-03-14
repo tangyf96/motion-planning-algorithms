@@ -16,7 +16,7 @@ class fRRT():
     """
     Class for flexible RRT planning
     """
-    def __init__(self, start, cur_goal, goal_list = [], obstacle = [], TreeArea = [], trans_prob = [], stepsize = 0.5, SampleRate = 2, maxIter = 800):
+    def __init__(self, start, cur_goal, location_list = [], obstacle = [], TreeArea = [], trans_prob = [], stepsize = 0.5, SampleRate = 2, maxIter = 800):
         """
        This is the initialization for class RRT
        Parameters:
@@ -38,11 +38,11 @@ class fRRT():
         self.path = [[self.cur_goal.x, self.cur_goal.y]]
         self.nodelist = []
         self.trans_prob = copy.deepcopy(trans_prob)
-        self.goal_list = []
-        self.tran_weight = 1
+        self.location_list = []
+        self.tran_weight = 20
         self.path_node = []
-        for (x, y) in goal_list:
-            self.goal_list.append(Node(x, y))
+        for (x, y) in location_list:
+            self.location_list.append(Node(x, y))
         print("initialize frrt object")
 
     def planning(self):
@@ -122,8 +122,8 @@ class fRRT():
         for ind in near_ind:
             node = self.nodelist[ind]
             dist = self.node_dist(node_new, node)
-            #new_cost = node_new.cost + dist + self.tran_weight * self.trans_cost(node)
-            new_cost = node_new.cost + self.tran_weight * self.trans_cost(node)
+            new_cost = node_new.cost + dist + self.tran_weight * self.trans_cost(node)
+            # new_cost = node_new.cost + self.tran_weight * self.trans_cost(node)
             if new_cost < node.cost:
                 if self.collision_check(node, node_new):
                     # collision
@@ -177,8 +177,8 @@ class fRRT():
         else:
             node_new.parent = min_cost_ind
             # change cost, consider transition probability cost
-            #node_new.cost = min_cost + self.tran_weight * self.trans_cost(node_new)
-            node_new.cost = self.tran_weight * self.trans_cost(node_new)
+            node_new.cost = min_cost + self.tran_weight * self.trans_cost(node_new)
+            #node_new.cost = self.tran_weight * self.trans_cost(node_new)
 
         return node_new
 
@@ -226,21 +226,21 @@ class fRRT():
         :return: transition probability cost
         """
         cost = 0
-        for ind, node in enumerate(self.goal_list):
+        for ind, node in enumerate(self.location_list):
             if self.cur_goal == node:
                 # print("check")
-                from_goal_ind = ind
+                to_goal_ind = ind
                 break
 
-        #cur_goal = self.goal_list[from_goal_ind]
-        dist = np.array([self.node_dist(node_new, goal) for goal in self.goal_list])
+        #cur_goal = self.location_list[from_goal_ind]
+        dist = np.array([self.node_dist(node_new, goal) for goal in self.location_list])
         try:
-            dist[from_goal_ind] = 0
+            dist[to_goal_ind] = 0
         except:
             pass
         
-        goal_change_prob = self.trans_prob[from_goal_ind]
-        cost = np.sum(dist * goal_change_prob)
+        transition_prob = self.trans_prob[:, to_goal_ind]
+        cost = np.sum(dist * transition_prob)
 
         return cost
 
@@ -318,7 +318,7 @@ class fRRT():
         ax.plot([x for (x,y) in self.path],[y for (x,y) in self.path], "-k")
         ax.plot([x for (x,y) in self.path],[y for (x,y) in self.path], "yo")
         # plot goal list
-        for node in self.goal_list:
+        for node in self.location_list:
             ax.plot(node.x, node.y, 'g*')
         # plot start and current goal
         ax.plot(self.start.x, self.start.y, 'ro')
@@ -361,12 +361,8 @@ def main():
     # initialize
     cur_goal = [14, 14]
 
-    """
-    goal_list = [(5,10), (1,4), (10,2)]
-    """
-    goal_list = [(1, 4), (4,1), (10, 5), (5, 10), (14,2), (2,14), (14, 14)]
+    location_list = [(1, 4), (4,1), (10, 5), (5, 10), (14,2), (2,14), (14, 14)]
     # trans_prob 2d array [from, to]
-    # trans_prob = np.array([[1, 0.9, 0], [0.9, 1, 0.5], [0, 0.5, 1]])
     trans_prob = np.array([[0.2, 0, 0.2, 0.1, 0.2, 0.1, 0.2],
                            [0.1, 0.2, 0, 0.2, 0.1, 0.2, 0.2],
                            [0.2, 0.1, 0.2, 0.1, 0.2, 0, 0.2],
@@ -378,15 +374,15 @@ def main():
     obstacle = [(8,8,1),(6,6,1),(12,12,1)]
 
     frrt = fRRT(start=[0,0], cur_goal=cur_goal,
-                    goal_list=goal_list, obstacle=obstacle,
+                    location_list=location_list, obstacle=obstacle,
                     TreeArea=[-1, 15], trans_prob=trans_prob)
     #for i in range(20):
     path = frrt.planning()
     if path is not None:
         plt.figure(1)
-        #frrt.DrawPath()
+        frrt.DrawPath()
         plt.figure(2)
-        #frrt.DrawTree()
+        frrt.DrawTree()
     else:
         print("Can't find the path")
 
