@@ -11,6 +11,7 @@ import random
 import math
 import copy
 import numpy as np
+import operator
 
 class fRRT():
     """
@@ -234,11 +235,15 @@ class fRRT():
 
         #cur_goal = self.location_list[from_goal_ind]
         dist = np.array([self.node_dist(node_new, goal) for goal in self.location_list])
+        assert to_goal_ind is not None
+
         try:
             dist[to_goal_ind] = 0
         except:
-            pass
-        
+            print('to_goal_ind assigned error')
+        '''
+        ERROR here, to_goal_ind referenced before assignment.
+        '''
         transition_prob = self.trans_prob[:, to_goal_ind]
         cost = np.sum(dist * transition_prob)
 
