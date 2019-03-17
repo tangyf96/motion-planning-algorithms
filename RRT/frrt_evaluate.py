@@ -12,7 +12,7 @@ import copy
 import numpy as np
 from frrt.flexible_rrt import fRRT, Node
 from rrt_algorithm.rrt_star import RRT as rrt_star
-
+import layout_generation as generation
 
 class Robot:
     def __init__(self,
@@ -203,10 +203,7 @@ class Experiment():
             if yes, change the goal of the robot, store the previous goal, 
             make a new path to human's current position
             '''
-            # determine if the robot reach the goal here? 
-
-            # if reach human, change human status of help, 
-            # human decide to need help or not? 
+            # decide whether human will call help
             if (not self.human.is_need_help) and (not self.robot.is_on_task):
                 self.human.is_need_help = self.human.help_client()
                 if self.human.is_need_help:
@@ -248,6 +245,7 @@ class Experiment():
                                 self.draw_path()
                                 # Add the measurement function here
                                 # measure the time the robot takes to reach human
+
                         else:
                             warnings.warn('the robot reach the goal, but not the human\' current positions!', UserWarning)
                                 
@@ -382,17 +380,20 @@ class Experiment():
         """
         :param path: list of waypoints location
         """
-        #print("begin to draw path!")
-        fig = plt.gcf()
-        fig.clf()
+        #print("begin to draw path!")    
+        plt.gcf().clf()
         ax = plt.gca()
         ax.set_xlim((self.robot.planner.min_rand, self.robot.planner.max_rand))
         ax.set_ylim((self.robot.planner.min_rand, self.robot.planner.max_rand))
-        # plot path
+        # plot path        
         ax.plot([x for (x, y) in self.robot.planner.path],
                 [y for (x, y) in self.robot.planner.path], "-k")
         ax.plot([x for (x, y) in self.robot.planner.path],
                 [y for (x, y) in self.robot.planner.path], "yo")
+
+        for (x, y, radius) in self.robot.planner.obstacle:
+            circle = plt.Circle((x, y), radius, color='y')
+            ax.add_artist(circle)
         # plot goal list
         ax.plot([x for (x, y) in self.robot.location_list],
                 [y for (x, y) in self.robot.location_list], 'g*')
@@ -402,10 +403,6 @@ class Experiment():
         ax.plot(self.robot.cur_loc[0], self.robot.cur_loc[1], 'r*')
         # plot human position
         ax.plot(self.human.cur_loc[0], self.human.cur_loc[1], 'b*')
-        # plot obstacles
-        for (x, y, radius) in self.robot.planner.obstacle:
-            circle = plt.Circle((x, y), radius, color='y')
-            ax.add_artist(circle)
         plt.draw()
         plt.pause(0.001)
 
@@ -451,8 +448,6 @@ def main():
         trans_prob=trans_prob,
         planner=frrt,
         human_model=human_goal_model)
-
-
 
     human1 = Human(
         location_list=location_list,
