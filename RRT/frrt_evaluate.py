@@ -36,7 +36,7 @@ class Robot:
         self.location_list = copy.deepcopy(location_list)
         self.planner = planner
         self.trans_prob = trans_prob
-        self.speed = 1.0
+        self.speed = 2.0
         self.human_model = human_model
         # whether robot is carrying out task of human
         self.is_on_task = False
@@ -82,9 +82,11 @@ class Robot:
                 return next_loc_ind
             else:
                 # reach the goal in one time step
-                self.cur_loc = [
-                    self.planner.path[-1][0], self.planner.path[-1][1]
-                ]
+                # self.cur_loc = [
+                #     self.planner.path[-1][0], self.planner.path[-1][1]
+                # ]
+                # change to this method to avoid floating error
+                self.cur_loc = [self.planner.cur_goal.x, self.planner.cur_goal.y]
                 return next_loc_ind + 1
 
     def path_dist(self):
@@ -183,6 +185,7 @@ class Experiment():
         self.human = human
         self.work_time = work_time
         self.path_distance = []
+        self.human_help_cnt = 0
 
     def work(self):
         """
@@ -206,6 +209,8 @@ class Experiment():
             # human decide to need help or not? 
             if (not self.human.is_need_help) and (not self.robot.is_on_task):
                 self.human.is_need_help = self.human.help_client()
+                if self.human.is_need_help:
+                    self.human_help_cnt += 1
             # main 
             if self.human.is_need_help:
                 # should I limit the time of providing help on each path? 
@@ -215,9 +220,11 @@ class Experiment():
                     if operator.ne(self.robot.cur_loc, self.robot.cur_goal):
                         if next_loc_ind == len(self.robot.planner.path):
                             print("the robot reaches the goal!", self.robot.cur_goal)
+                            self.draw_path()
                             continue
                         try:
                             next_loc_ind = self.robot.move(self.robot.cur_loc, next_loc_ind)
+                            self.draw_path()
                         except IndexError:
                             print("Index Error line 221!")
                     else:
@@ -225,6 +232,7 @@ class Experiment():
                         # decide whether the goal is human or the detour station
                         if operator.eq(self.robot.cur_goal, self.human.cur_loc):
                             # the goal is human
+                            self.draw_path()
                             print("the robot has reached the human position to catch packages!", self.robot.cur_goal)
                             # reset the planner to robot's original goal
                             self.reset_planner(self.robot.prev_goal)
@@ -237,7 +245,7 @@ class Experiment():
                             next_loc_ind = 1
                             # draw the new path
                             if path:
-                                self.draw_path(path)
+                                self.draw_path()
                                 # Add the measurement function here
                                 # measure the time the robot takes to reach human
                         else:
@@ -270,28 +278,32 @@ class Experiment():
                         next_loc_ind = 1
                         # draw the new path
                         if path:
-                            self.draw_path(path)
+                            self.draw_path()
                             # Add the measurement function here
 
                         #######################################################
                     else:
                         # robot refuse to help
+                        print("the robot refuse to help!")
                         self.robot.is_able_help = False
                         # move 
                         if operator.ne(self.robot.cur_loc, self.robot.cur_goal):
                             if next_loc_ind == len(self.robot.planner.path):
+                                self.draw_path()
                                 print("the robot reaches the goal!", self.robot.cur_goal)
                                 continue
                             try:
                                 next_loc_ind = self.robot.move(self.robot.cur_loc, next_loc_ind)
+                                self.draw_path()
                             except IndexError:
                                 print("Index Error line 260!")
                         else:
                             # robot reaches its own goal
+                            self.draw_path()
                             print("the robot has reached the goal!", self.robot.cur_goal)
                             # return the goal and start position to start a new round 
                             self.reset_planner(self.robot.fix_start)
-                            self.robot.fix_start = self.robot.cur_loc
+                            self.robot.fix_start = copy.deepcopy(self.robot.cur_loc)
                             self.robot.is_able_help = True
                             # generate new path
                             path = self.robot.find_path()
@@ -300,7 +312,7 @@ class Experiment():
                             next_loc_ind = 1
                             # draw the new path
                             if path:
-                                self.draw_path(path)
+                                self.draw_path()
                                 # Add the measurement function here
             else:
                 # the human don't need help currently
@@ -311,6 +323,7 @@ class Experiment():
                         continue
                     try:
                         next_loc_ind = self.robot.move(self.robot.cur_loc, next_loc_ind)
+                        self.draw_path()
                     except IndexError:
                         print("Index Error line 249!")
                 else:
@@ -318,7 +331,7 @@ class Experiment():
                     print("the robot has reached the goal!", self.robot.cur_goal)
                     # return the goal and start position to start a new round 
                     self.reset_planner(self.robot.fix_start)
-                    self.robot.fix_start = self.robot.cur_loc
+                    self.robot.fix_start = copy.deepcopy(self.robot.cur_loc)
                     self.robot.is_able_help = True
                     self.robot.is_on_task = False
                     # generate new path
@@ -327,9 +340,8 @@ class Experiment():
                         path = self.robot.find_path()
                     next_loc_ind = 1
                     # draw the new path
-                    if path:
-                        self.draw_path(path)
-                        # Add the measurement function here
+                    self.draw_path()
+                    # Add the measurement function here
 
             self.work_time -= 1
             #time.sleep(1)
@@ -368,7 +380,7 @@ class Experiment():
         else:
             return True
 
-    def draw_path(self, path):
+    def draw_path(self):
         """
         :param path: list of waypoints location
         """
@@ -407,7 +419,7 @@ def main():
     cur_goal = [14, 14]
     location_list = [[1, 4], [4, 1], [5, 10], [10, 5], [2, 14], [14, 2], [14, 14]]
 
-    simu_time = 50
+    simu_time = 200
     # trans_prob 2d array [from, to]
     human_goal_model = np.array([[1, -1, 1, 0, 1, 0,
                                   1], [0, 1, -1, 1, 0, 1, 1],
@@ -461,15 +473,15 @@ def main():
         location_list=location_list,
         cur_loc= [10, 5],
         trans_prob = trans_prob,
-        help_prob=1.0)
+        help_prob=0.05)
     
     exp1 = Experiment(robot=robot1, human=human1, work_time=simu_time)
+    exp1.work()
+    print(exp1.human_help_cnt)
     # exp2 = Experiment(robot=robot2, human = human1, work_time=simu_time)
     # ave_path_dist1 = []
     # ave_path_dist2 = []
-
     # num_simu = 1
-    exp1.work()
     # ave_path_dist1.append(sum(exp1.path_distance) / len(exp1.path_distance))
     # exp2.work()
     # ave_path_dist2.append(sum(exp2.path_distance) / len(exp2.path_distance))
@@ -479,7 +491,6 @@ def main():
     # ave_path_dist2 = ave_path_dist2/num_simu
     # print("average path distance for fRRT:", ave_path_dist1)
     # print("average path distance for rrt star:", ave_path_dist2)
-
 
 if __name__ == '__main__':
     main()
