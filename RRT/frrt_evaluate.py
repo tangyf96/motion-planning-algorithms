@@ -36,7 +36,7 @@ class Robot:
         self.location_list = copy.deepcopy(location_list)
         self.planner = planner
         self.trans_prob = trans_prob
-        self.speed = 2.0
+        self.speed = 1.0
         self.human_model = human_model
         # whether robot is carrying out task of human
         self.is_on_task = False
@@ -419,7 +419,7 @@ def main():
     cur_goal = [14, 14]
     location_list = [[1, 4], [4, 1], [5, 10], [10, 5], [2, 14], [14, 2], [14, 14]]
 
-    simu_time = 200
+    simu_time = 100
     # trans_prob 2d array [from, to]
     human_goal_model = np.array([[1, -1, 1, 0, 1, 0,
                                   1], [0, 1, -1, 1, 0, 1, 1],
@@ -454,31 +454,36 @@ def main():
         planner=frrt,
         human_model=human_goal_model)
 
-    # rrt star
 
-    # rrt_star_planner = rrt_star(
-    #     start=[0, 0], 
-    #     goal=cur_goal, 
-    #     obstacleList=obstacle, 
-    #     randArea=[-1, 15])
-
-    # robot2 = Robot(
-    #     start=[0, 0],
-    #     location_list=location_list,
-    #     trans_prob=trans_prob,
-    #     planner=rrt_star_planner,
-    #     human_model=human_goal_model)
 
     human1 = Human(
         location_list=location_list,
         cur_loc= [10, 5],
         trans_prob = trans_prob,
-        help_prob=0.05)
+        help_prob=0.1)
     
     exp1 = Experiment(robot=robot1, human=human1, work_time=simu_time)
     exp1.work()
-    print(exp1.human_help_cnt)
-    # exp2 = Experiment(robot=robot2, human = human1, work_time=simu_time)
+    print('exp1 help count is:', exp1.human_help_cnt)
+
+    # rrt star
+
+    rrt_star_planner = rrt_star(
+        start=[0, 0], 
+        goal=cur_goal, 
+        obstacleList=obstacle, 
+        randArea=[-1, 15])
+
+    robot2 = Robot(
+        start=[1, 4],
+        location_list=location_list,
+        trans_prob=trans_prob,
+        planner=rrt_star_planner,
+        human_model=human_goal_model)
+    exp2 = Experiment(robot=robot2, human=human1, work_time=simu_time)
+    exp2.work()
+    print('exp2 help count is:', exp1.human_help_cnt)
+
     # ave_path_dist1 = []
     # ave_path_dist2 = []
     # num_simu = 1
