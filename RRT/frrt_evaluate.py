@@ -265,8 +265,7 @@ class Experiment():
                     # 
                     if is_help:
                         # help the human
-                        # change the goal of the robot and make a detour
-                        # also store the robot's current goal
+                        # store the robot's current goal
                         self.robot.prev_goal = self.robot.cur_goal
                         self.robot.is_on_task = True
                         # replan and reset the planner towards human's current position
@@ -281,7 +280,6 @@ class Experiment():
                             self.draw_path()
                             # Add the measurement function here
 
-                        #######################################################
                     else:
                         # robot refuse to help
                         print("the robot refuse to help!")

@@ -3,4 +3,5 @@
 *.iml
 __pycache__
 .vscode
+RRT/img
 simulation to do list.md
