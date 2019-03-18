@@ -186,6 +186,7 @@ class Experiment():
         self.work_time = work_time
         self.dist_to_human = []
         self.path_distance = []
+        self.eval_var = []
         self.human_help_cnt = 0
 
     def work(self):
@@ -280,7 +281,18 @@ class Experiment():
                             # Add the measurement function here
                             diff = np.diff(np.array(path), axis = 0)
                             temp = np.linalg.norm(diff, axis=1)
+                            # find the corresponding transition probability
+                            for ind, loc in enumerate(self.robot.location_list):
+                                if self.human.cur_loc[0] == loc[0] and  self.human.cur_loc[1] == loc[1]:
+                                    # print("check")
+                                    from_loc_ind = ind
+                                if self.robot.prev_goal[0] == loc[0] and self.robot.prev_goal[1] == loc[1]:
+                                    to_loc_ind = ind
+                                
+                            prob_to_cur_goal = self.robot.trans_prob[from_loc_ind][to_loc_ind]
+                            # use probability * path distance to measure the effectiveness of the algorithm
                             self.path_distance.append(np.sum(temp))
+                            self.eval_var.append(np.sum(temp) / prob_to_cur_goal)
 
                     else:
                         # robot refuse to help
@@ -432,12 +444,12 @@ def main():
     # transition matrix for Markov Chain model. 
     # (from_location_index, to_location_index) each row represents the probability that 
     # the human's choose another location from the current locations
-    trans_prob = np.array([[0.2, 0, 0.2, 0.1, 0.2, 0.1, 0.2],
-                           [0.1, 0.2, 0, 0.2, 0.1, 0.2, 0.2],
-                           [0.2, 0.1, 0.2, 0.1, 0.2, 0, 0.2],
-                           [0.1, 0.2, 0, 0.2, 0.1, 0.2, 0.2],
-                           [0.2, 0.1, 0.2, 0, 0.2, 0.1, 0.2],
-                           [0.1, 0.2, 0.1, 0.2, 0, 0.2, 0.2],
+    trans_prob = np.array([[0.2, 0,   0.2, 0.1, 0.2, 0.1, 0.2],
+                           [0.1, 0.2, 0,   0.2, 0.1, 0.2, 0.2],
+                           [0.2, 0.1, 0.2, 0.1, 0.2, 0,   0.2],
+                           [0.1, 0.2, 0,   0.2, 0.1, 0.2, 0.2],
+                           [0.2, 0.1, 0.2, 0,   0.2, 0.1, 0.2],
+                           [0.1, 0.2, 0.1, 0.2, 0,   0.2, 0.2],
                            [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.4]])
                            
     obstacle = [(8, 8, 1), (6, 6, 1), (12, 12, 1), (2,3,1)]
@@ -445,7 +457,7 @@ def main():
     frrt = fRRT(
         start=[1, 4],
         cur_goal=cur_goal,
-        location_list=location_list,
+        goal_list=location_list,
         obstacle=obstacle,
         TreeArea=[-1, 15],
         trans_prob=trans_prob)
@@ -485,16 +497,16 @@ def main():
     exp2.work()
     print('exp2 help count is:', exp1.human_help_cnt)
 
-    ave_path_dist1 = []
-    ave_path_dist1.append(sum(exp1.path_distance) / len(exp1.path_distance))
-    ave_path_dist2 = []
-    ave_path_dist2.append(sum(exp2.path_distance) / len(exp2.path_distance))
-
-    # robot1.work(simu_time)
-    # ave_path_dist1 = ave_path_dist1/num_simu
-    # ave_path_dist2 = ave_path_dist2/num_simu
-    # print("average path distance for fRRT:", ave_path_dist1)
-    # print("average path distance for rrt star:", ave_path_dist2)
-
+    # the evaluation variable 
+    eval_variable_frrt = sum(exp1.eval_var) / len(exp1.eval_var)
+    eval_variable_rrtstar = sum(exp2.eval_var) / len(exp2.eval_var)
+    print('the evaluation for frrt is:', eval_variable_frrt)
+    print('the evaluation for rrt star is:', eval_variable_rrtstar)
+    
+    ave_path_dist1 = sum(exp1.path_distance) / len(exp1.path_distance)
+    ave_path_dist2 = sum(exp2.path_distance) / len(exp2.path_distance)
+    print("average path distance for fRRT:", ave_path_dist1)
+    print("average path distance for rrt star:", ave_path_dist2)
+    
 if __name__ == '__main__':
     main()
