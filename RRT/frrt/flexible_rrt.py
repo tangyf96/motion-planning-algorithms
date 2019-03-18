@@ -17,7 +17,7 @@ class fRRT():
     """
     Class for flexible RRT planning
     """
-    def __init__(self, start, cur_goal, location_list = [], obstacle = [], TreeArea = [], trans_prob = [], stepsize = 0.5, SampleRate = 2, maxIter = 800):
+    def __init__(self, start, cur_goal, goal_list = [], obstacle = [], TreeArea = [], trans_prob = [], stepsize = 0.5, SampleRate = 2, maxIter = 800):
         """
        This is the initialization for class RRT
        Parameters:
@@ -39,11 +39,11 @@ class fRRT():
         self.path = [[self.cur_goal.x, self.cur_goal.y]]
         self.nodelist = []
         self.trans_prob = copy.deepcopy(trans_prob)
-        self.location_list = []
+        self.goal_list = []
         self.tran_weight = 20
         self.path_node = []
-        for (x, y) in location_list:
-            self.location_list.append(Node(x, y))
+        for (x, y) in goal_list:
+            self.goal_list.append(Node(x, y))
         print("initialize frrt object")
 
     def planning(self):
@@ -227,14 +227,14 @@ class fRRT():
         :return: transition probability cost
         """
         cost = 0
-        for ind, node in enumerate(self.location_list):
+        for ind, node in enumerate(self.goal_list):
             if self.cur_goal == node:
                 # print("check")
                 to_goal_ind = ind
                 break
 
-        #cur_goal = self.location_list[from_goal_ind]
-        dist = np.array([self.node_dist(node_new, goal) for goal in self.location_list])
+        #cur_goal = self.goal_list[from_goal_ind]
+        dist = np.array([self.node_dist(node_new, goal) for goal in self.goal_list])
         assert to_goal_ind is not None
         try:
             dist[to_goal_ind] = 0
@@ -320,7 +320,7 @@ class fRRT():
         ax.plot([x for (x,y) in self.path],[y for (x,y) in self.path], "-k")
         ax.plot([x for (x,y) in self.path],[y for (x,y) in self.path], "yo")
         # plot goal list
-        for node in self.location_list:
+        for node in self.goal_list:
             ax.plot(node.x, node.y, 'g*')
         # plot start and current goal
         ax.plot(self.start.x, self.start.y, 'ro')
@@ -363,7 +363,7 @@ def main():
     # initialize
     cur_goal = [14, 14]
 
-    location_list = [(1, 4), (4,1), (10, 5), (5, 10), (14,2), (2,14), (14, 14)]
+    goal_list = [(1, 4), (4,1), (10, 5), (5, 10), (14,2), (2,14), (14, 14)]
     # trans_prob 2d array [from, to]
     trans_prob = np.array([[0.2, 0, 0.2, 0.1, 0.2, 0.1, 0.2],
                            [0.1, 0.2, 0, 0.2, 0.1, 0.2, 0.2],
@@ -376,7 +376,7 @@ def main():
     obstacle = [(8,8,1),(6,6,1),(12,12,1)]
 
     frrt = fRRT(start=[0,0], cur_goal=cur_goal,
-                    location_list=location_list, obstacle=obstacle,
+                    goal_list=goal_list, obstacle=obstacle,
                     TreeArea=[-1, 15], trans_prob=trans_prob)
     #for i in range(20):
     path = frrt.planning()
