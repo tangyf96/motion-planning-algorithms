@@ -59,9 +59,9 @@ def generate_location(x_range, y_range, num_locations, obstacles):
     x_max = x_range[1]
     y_min = y_range[0]
     y_max = y_range[1]
-    safe_dist = min((x_max - x_min)/50, (y_max - y_min)/50)
+    safe_dist = min((x_max - x_min)/60, (y_max - y_min)/60)
     locations_list = []
-    while len(locations_list) <= num_locations:
+    while len(locations_list) < num_locations:
         x = np.random.uniform(x_min, x_max)
         y = np.random.uniform(y_min, y_max)
         is_collision = False
@@ -77,22 +77,21 @@ def generate_location(x_range, y_range, num_locations, obstacles):
     return locations_list
 
 if __name__ == "__main__":
-    # obstacles = generate_obstacles([0, 30], [0, 30], 15, [1, 3])
-    # locations_list = generate_location([1, 30], [1, 30], 8, obstacles)
-    # draw_layout([0, 30], [0, 30], obstacles, locations_list)
-    # P = markov_transition_matrix(len(locations_list))
-    # print(P)
-    x = np.linspace(0, 6*np.pi, 100)
-    y = np.sin(x)
+    obstacles = generate_obstacles([0, 30], [0, 30], 15, [1, 3])
+    locations_list = generate_location([1, 30], [1, 30], 8, obstacles)
+    draw_layout([0, 30], [0, 30], obstacles, locations_list)
+    P = markov_transition_matrix(len(locations_list))
+ 
 
     # You probably won't need this if you're embedding things in a tkinter plot...
-    plt.ion()
+    # plt.ion()
+#    x = np.linspace(0, 6*np.pi, 100)
+#     y = np.sin(x)   
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # line1, = ax.plot(x, y, 'r-') # Returns a tuple of line objects, thus the comma
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    line1, = ax.plot(x, y, 'r-') # Returns a tuple of line objects, thus the comma
-
-    for phase in np.linspace(0, 10*np.pi, 500):
-        line1.set_ydata(np.sin(x + phase))
-        fig.canvas.draw()
-        fig.canvas.flush_events()
+    # for phase in np.linspace(0, 10*np.pi, 500):
+    #     line1.set_ydata(np.sin(x + phase))
+    #     fig.canvas.draw()
+    #     fig.canvas.flush_events()
