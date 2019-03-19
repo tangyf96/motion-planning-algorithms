@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import math
 import copy
 import numpy as np
+import pickle
 from frrt.flexible_rrt import fRRT, Node
 from rrt_algorithm.rrt_star import RRT as rrt_star
 import layout_generation as generation
@@ -20,13 +21,12 @@ class Robot:
                  location_list=[],
                  trans_prob=[],
                  planner=None,
-                 human_model=None):
+                 ):
         """
         Robot class to simulate a robot working with different planner.
         :param start: the initial location of robot
         :param location_list: the warehouse stations in the system
         :param planner: RRT planner to generate plan
-        :param human_mode: The transition probability matrix in human Markov Chain model
         """
         self.cur_start = copy.deepcopy(start)
         self.fix_start = copy.deepcopy(start)
@@ -37,7 +37,6 @@ class Robot:
         self.planner = planner
         self.trans_prob = trans_prob
         self.speed = 1.0
-        self.human_model = human_model
         # whether robot is carrying out task of human
         self.is_on_task = False
         # whether robot is willing to help
@@ -417,21 +416,21 @@ class Experiment():
         # plot current start and goal, robot position
         ax.plot(self.robot.planner.start.x, self.robot.planner.start.y, 'ro')
         ax.plot(self.robot.cur_goal[0], self.robot.cur_goal[1], 'bo')
-        ax.plot(self.robot.cur_loc[0], self.robot.cur_loc[1], 'r*')
         # plot human position
         ax.plot(self.human.cur_loc[0], self.human.cur_loc[1], 'b*')
+        ax.plot(self.robot.cur_loc[0], self.robot.cur_loc[1], 'r*')
         plt.draw()
-        plt.pause(0.001)
+        plt.pause(0.01)
 
 
 def main():
     print("Start evaluation")
     # ===Search Path with flexible rrt===
     # initialize
+    '''
     cur_goal = [14, 14]
     location_list = [[1, 4], [4, 1], [5, 10], [10, 5], [2, 14], [14, 2], [14, 14]]
 
-    simu_time = 400
     # trans_prob 2d array [from, to]
     human_goal_model = np.array([[1, -1, 1, 0, 1, 0,
                                   1], [0, 1, -1, 1, 0, 1, 1],
@@ -453,60 +452,98 @@ def main():
                            [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.4]])
                            
     obstacle = [(8, 8, 1), (6, 6, 1), (12, 12, 1), (2,3,1)]
-    # flexible RRT
-    frrt = fRRT(
-        start=[1, 4],
-        cur_goal=cur_goal,
-        goal_list=location_list,
-        obstacle=obstacle,
-        TreeArea=[-1, 15],
-        trans_prob=trans_prob)
+    '''
+    '''
+    try to use random layout generation
+    '''
+    x_range = [0, 30]
+    y_range = [0, 30]
+    num_locations = 10
+    num_obstacles = 10
+    simu_time = 400
+    num_simu = 2
+    eval_variable_frrt = []
+    eval_variable_rrtstar = []
+    ave_path_dist1 = []
+    ave_path_dist2 = []
 
-    robot1 = Robot(
-        start=[1, 4],
-        location_list=location_list,
-        trans_prob=trans_prob,
-        planner=frrt,
-        human_model=human_goal_model)
+    for i in range(num_simu):
 
-    human1 = Human(
-        location_list=location_list,
-        cur_loc= [10, 5],
-        trans_prob = trans_prob,
-        help_prob=0.2)
-    
-    exp1 = Experiment(robot=robot1, human=human1, work_time=simu_time)
-    exp1.work()
-    print('exp1 help count is:', exp1.human_help_cnt)
+        # generate the layouts
+        obstacles = generation.generate_obstacles(x_range, y_range, num_obstacles, [1,3])
 
-    # rrt star
+        location_list = generation.generate_location(x_range, y_range, num_locations, obstacles)
+        # generation.draw_layout(x_range, y_range, obstacles, location_list)
+        P = generation.markov_transition_matrix(num_locations)
 
-    rrt_star_planner = rrt_star(
-        start=[0, 0], 
-        goal=cur_goal, 
-        obstacleList=obstacle, 
-        randArea=[-1, 15])
+        cur_start = location_list[0]
+        # cur_goal = location_list[np.random.randint(1, num_locations)]
+        cur_goal = location_list[-1]
+        # flexible RRT
+        frrt = fRRT(
+            start=cur_start,
+            cur_goal=cur_goal,
+            goal_list=location_list,
+            obstacle=obstacles,
+            TreeArea=x_range,
+            trans_prob=P)
 
-    robot2 = Robot(
-        start=[1, 4],
-        location_list=location_list,
-        trans_prob=trans_prob,
-        planner=rrt_star_planner,
-        human_model=human_goal_model)
-    exp2 = Experiment(robot=robot2, human=human1, work_time=simu_time)
-    exp2.work()
-    print('exp2 help count is:', exp1.human_help_cnt)
+        robot1 = Robot(
+            start=cur_start,
+            location_list=location_list,
+            trans_prob=P,
+            planner=frrt)
 
-    # the evaluation variable 
-    eval_variable_frrt = sum(exp1.eval_var) / len(exp1.eval_var)
-    eval_variable_rrtstar = sum(exp2.eval_var) / len(exp2.eval_var)
-    print('the evaluation for frrt is:', eval_variable_frrt)
-    print('the evaluation for rrt star is:', eval_variable_rrtstar)
-    
-    ave_path_dist1 = sum(exp1.path_distance) / len(exp1.path_distance)
-    ave_path_dist2 = sum(exp2.path_distance) / len(exp2.path_distance)
-    print("average path distance for fRRT:", ave_path_dist1)
-    print("average path distance for rrt star:", ave_path_dist2)
+        human1 = Human(
+            location_list=location_list,
+            cur_loc= location_list[5],
+            trans_prob = P,
+            help_prob=0.2)
+        
+        exp1 = Experiment(robot=robot1, human=human1, work_time=simu_time)
+        exp1.work()
+        print('exp1 help count is:', exp1.human_help_cnt)
+
+        # rrt star
+
+        rrt_star_planner = rrt_star(
+            start= cur_start, 
+            goal=cur_goal, 
+            obstacleList=obstacles, 
+            randArea=x_range)
+
+        robot2 = Robot(
+            start=cur_start,
+            location_list=location_list,
+            trans_prob=P,
+            planner=rrt_star_planner)
+
+        exp2 = Experiment(robot=robot2, human=human1, work_time=simu_time)
+        exp2.work()
+
+        # print('exp2 help count is:', exp1.human_help_cnt)
+
+        # the evaluation variable 
+        eval_variable_frrt.append(sum(exp1.eval_var) / len(exp1.eval_var))
+        eval_variable_rrtstar.append(sum(exp2.eval_var) / len(exp2.eval_var))
+
+        # print('the evaluation for frrt is:', eval_variable_frrt)
+        # print('the evaluation for rrt star is:', eval_variable_rrtstar)
+        
+        ave_path_dist1.append(sum(exp1.path_distance) / len(exp1.path_distance)) 
+        ave_path_dist2.append(sum(exp2.path_distance) / len(exp2.path_distance))
+        
+    # print("average path distance for fRRT:", ave_path_dist1)
+    # print("average path distance for rrt star:", ave_path_dist2)
+    with open('eval_variable_frrt.pkl', 'wb') as f:
+        pickle.dump(eval_variable_frrt, f)
+    with open('eval_variable_rrtstart.pkl', 'wb') as f:
+        pickle.dump(eval_variable_rrtstar, f)
+    with open('ave_path_dist_frrt.pkl', 'wb') as f:
+        pickle.dump(ave_path_dist1, f)
+    with open('ave_path_dist_rrtstar.pkl', 'wb') as f:
+        pickle.dump(ave_path_dist2, f)
+
     
 if __name__ == '__main__':
     main()
